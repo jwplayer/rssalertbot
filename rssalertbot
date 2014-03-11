@@ -51,8 +51,6 @@ class Feed(object):
     username = None
     password = None
 
-    state_dir = 'var'
-
     def __init__(self, cfg, group, feed, url):
         self.feed = feed
         self.url  = url
@@ -289,11 +287,16 @@ if __name__ == '__main__':
         
     cfg = readconfig(opts.config)
 
+    if not 'state_path' in cfg:
+        cfg['state_path'] = ''
+
+    # allow command-line override
     if opts.state_path:
         cfg['state_path'] = opts.state_path
 
-    if not os.path.isdir(cfg['state_path']):
+    if cfg['state_path'] and not os.path.isdir(cfg['state_path']):
         log.error("State path '{}' does not exist".format(cfg['state_path']))
         sys.exit(-1)
+
     main(cfg)
 
