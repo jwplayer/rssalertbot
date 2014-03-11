@@ -1,0 +1,299 @@
+#!/usr/bin/env python
+"""
+RSS feed monitoring robot.
+
+"""
+
+__author__    = 'Michael Stella <michael@jwplayer.com>'
+__copyright__ = "Copyright 2014 Long Tail Ad Solutions"
+__version__   = "1.0"
+
+import argparse
+import base64
+import datetime
+import hipchat
+import feedparser
+import json
+import logging
+import os
+import pytz
+import re
+import sys
+import urllib2
+from dateutil import parser as dateparser
+from mailer import Mailer, Message
+
+BOGUS_TIMEZONES = {
+    'PST': '-0800',
+    'PDT': '-0700',
+    'MST': '-0700',
+    'MDT': '-0600',
+    'CST': '-0600',
+    'CDT': '-0500',
+    'EST': '-0500',
+    'EDT': '-0400',
+}
+
+logging.basicConfig(level=logging.ERROR)
+log = logging.getLogger()
+
+class Feed(object):
+    """Base class for feeds"""
+    group = "FeedBot"
+
+    enable_hipchat  = False
+    enable_email    = False
+    enable_log      = False
+
+    hipchat_colors  = {}
+    hipchat_match_body = False
+
+    username = None
+    password = None
+
+    state_dir = 'var'
+
+    def __init__(self, cfg, group, feed, url):
+        self.feed = feed
+        self.url  = url
+
+        outputs = cfg['outputs']
+        self.state_path = cfg['state_path']
+
+        if 'hipchat' in outputs:
+            self.enable_hipchat = outputs['hipchat']['enabled']
+            self.hipchat_room   = outputs['hipchat']['room']
+            self.hipchat_token  = outputs['hipchat']['token']
+
+        if 'email' in outputs:
+            self.enable_email   = outputs['email']['enabled']
+            self.email_target   = outputs['email']['to']
+            self.email_from     = "{} Feeds <{}>".format(group['name'], outputs['email']['from'])
+            self.email_server   = outputs['email']['server']
+
+        if 'log' in outputs:
+            self.enable_log     = outputs['log']['enabled']
+
+        self.group = group['name']
+
+        # configure fetch user/password
+        if 'username' in group:
+            self.username = group['username']
+        if 'password' in group:
+            self.password = group['password']
+
+        if 'outputs' in group:
+            # configure email output
+            if self.enable_email and 'email' in group['outputs']:
+                if 'to' in group['outputs']['email']:
+                    self.email_target = group['outputs']['email']['to']
+                if 'from' in group['outputs']['email']:
+                    self.email_from = group['outputs']['email']['from']
+
+            # configure hipchat output
+            if self.enable_hipchat and 'hipchat' in group['outputs']:
+                if 'room' in group['outputs']['hipchat']:
+                    self.hipchat_room = group['outputs']['hipchat']['room']
+                if 'colors' in group['outputs']['hipchat']:
+                    self.hipchat_colors = group['outputs']['hipchat']['colors']
+                if 'match_body' in group['outputs']['hipchat']:
+                    self.hipchat_match_body = group['outputs']['hipchat']['match_body']
+
+        self._previous_date = None
+
+        self.datafile = os.path.join(cfg['state_path'], 'last.{}.dat'.format(self.feed))
+
+        log.debug(" url: {}".format(self.url))
+        log.debug(" datafile: {}".format(self.datafile))
+
+    
+    @property
+    def previous_date(self):
+        if not self._previous_date:
+            # read the previous date from our data file
+            try:
+                with open(self.datafile, 'rb') as f:
+                    self._previous_date = dateparser.parse(f.read().strip())
+            except:
+                self._previous_date = datetime.datetime.utcnow().replace(tzinfo=pytz.utc) - datetime.timedelta(days=1)
+
+        return self._previous_date
+
+
+    def save_date(self, new_date):
+        # save the date
+        with open(self.datafile, 'wb') as f:
+            f.write(str(new_date))
+
+
+    def entries(self):
+        """Fetch and return a list of entries"""
+        req = urllib2.Request(self.url)
+        if self.username and self.password:
+            req.add_header('Authorization',
+                           'Basic ' + base64.urlsafe_b64encode('{0}:{1}'.format(self.username, self.password)))
+
+        try:
+            rsp = urllib2.urlopen(req)
+            data = feedparser.parse(rsp.read())
+            if not data:
+                log.error("Error: no data recieved for feed {}".format(self.feed))
+                return []
+            return data.entries
+        except urllib2.HTTPError, e:
+            log.error("Error fetching feed {}: {}".format(self.feed, e))
+            return []
+
+
+    def process(self):
+        """Fetch and process this feed"""
+
+        new_date = None
+        for entry in self.entries():
+            # fix some bogus timezones
+            m = re.search(' ([PMCE][DS]T)$', entry.published)
+            if m:
+                entry.published = entry.published.replace(m.group(1), BOGUS_TIMEZONES[m.group(1)])
+
+            date = dateparser.parse(entry.published)
+
+            # store the date from the first entry
+            if not new_date or date > new_date:
+                new_date = date
+
+            # only notify about new entries
+            if date > self.previous_date:
+                self.alert(entry)
+
+        if not new_date:
+            new_date = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
+
+        self.save_date(new_date)
+
+
+    def alert(self, entry):
+        self.alert_log(entry)
+        self.alert_email(entry)
+        self.alert_hipchat(entry)
+
+
+    def alert_email(self, entry):
+        """Sends alert via email"""
+
+        if not self.enable_email:
+            return
+
+        smtp = Mailer(host=SMTP_HOST)
+        message = Message(charset="utf-8", From=self.email_from, To=self.email_target,
+            Subject = "{} Alert: ({}) {}".format(self.group, self.feed, entry.title))
+        message.Body = "Feed: {}\nDate: {}\n\n{}".format(self.feed, entry.published, entry.description)
+        smtp.send(message)
+
+
+    def alert_hipchat(self, entry, color=None):
+        """Sends alert to hipchat"""
+        if not self.enable_hipchat:
+            return
+
+        # the string we'll match against for coloring the message
+        # - it might be both title *and* description
+        matchstring = entry.title
+        if self.hipchat_match_body:
+            matchstring += entry.description
+
+        # attempt to match the provided strings, in addition to the standards
+        # first we do a regex to find the first occurrance, assuming that the
+        # most recent status in the entry will be at the beginning, then
+        # match that against the color list
+        if self.hipchat_colors:
+            matches = '(' + '|'.join(self.hipchat_colors.keys()) + ')'
+            m = re.search(matches, matchstring)
+            if m:
+                for (s,c) in self.hipchat_colors.items():
+                    if s in m.groups(1):
+                        color = c
+                        break
+
+        # if color isn't set already, try some defaults
+        if not color:
+            if '[Update]' in matchstring:
+                color='yellow'
+            elif '[Resolved]' in matchstring:
+                color='green'
+            elif '[RESOLVED]' in matchstring:
+                color='green'
+
+            else:
+                color='red'
+
+        hipster = hipchat.HipChat(token=self.hipchat_token)
+
+        message = '<b>{feed}</b> {date}: {title}<br>{body}'.format(
+            feed=self.feed,
+            date=entry.published,
+            title=entry.title,
+            body=entry.description)
+
+        hipster.message_room(self.hipchat_room, self.group, message, 
+                                message_format='html', color=color, notify=True)
+
+
+    def alert_log(self, entry):
+        """Sends alert to logfile"""
+        if not self.enable_log:
+            return
+
+        log.warning("({}) {}: {}".format(self.feed, entry.published, entry.title))
+        log.debug("{}\n".format(entry.description.encode('utf-8')))
+
+
+def main(cfg):
+    for group in cfg['feedgroups']:
+        log.info("Fetching feeds for {}".format(group['name']))
+
+        for f in group['feeds']:
+            log.info(" Fetching feed '{}'".format(f['name']))
+            feed = Feed(cfg, group, f['name'], f['url'])
+            feed.process()
+
+
+def readconfig(cfgfile):
+    """Read config file"""
+    log.debug("Reading config from {}".format(cfgfile))
+    try:
+        cfg = None
+        with open(cfgfile, 'rb') as f:
+            cfg = json.loads(f.read())
+        return cfg
+    except IOError as e:
+        log.error("Can't open config file: {}".format(e))
+        sys.exit(-1)
+        
+
+if __name__ == '__main__':
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument('-c', '--config', type=str, default="config.json",
+                            help="config file (default: ./config.json)")
+    argparser.add_argument('--state_path', type=str,
+                            help="state path (default: config file 'state_path')")
+    argparser.add_argument('-v', action='count')
+
+    opts = argparser.parse_args(sys.argv[1:])
+
+    if opts.v >= 3:
+        log.setLevel(logging.DEBUG)
+    elif opts.v == 2:
+        log.setLevel(logging.INFO)
+    elif opts.v == 1:
+        log.setLevel(logging.WARNING)
+        
+    cfg = readconfig(opts.config)
+
+    if opts.state_path:
+        cfg['state_path'] = opts.state_path
+
+    if not os.path.isdir(cfg['state_path']):
+        log.error("State path '{}' does not exist".format(cfg['state_path']))
+        sys.exit(-1)
+    main(cfg)
+

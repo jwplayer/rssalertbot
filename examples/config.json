@@ -1,0 +1,61 @@
+{
+    "state_path":   "var",
+
+    "outputs": {
+        "hipchat": {
+            "enabled":  false,
+            "token":    "875020079",
+            "room":     "138",
+            "user":     "feedbot"
+        },
+        "email": {
+            "enabled":  false,
+            "server":   "localhost",
+            "from":     "feedbot@example.com",
+            "to":       "System Alerts <alerts@example.com>"
+        },
+        "log": {
+            "enabled":  true
+        }
+    },
+        
+    "feedgroups": [
+        {
+            "name": "AWS",
+            "feeds": [
+                {"name": "cloudfront",  "url": "http://status.aws.amazon.com/rss/cloudfront.rss"},
+                {"name": "ec2",         "url": "http://status.aws.amazon.com/rss/ec2-us-east-1.rss"},
+                {"name": "elb",         "url": "http://status.aws.amazon.com/rss/elb-us-east-1.rss"},
+                {"name": "emr",         "url": "http://status.aws.amazon.com/rss/emr-us-east-1.rss"},
+                {"name": "elasticache", "url": "http://status.aws.amazon.com/rss/elasticache-us-east-1.rss"},
+                {"name": "redshift",    "url": "http://status.aws.amazon.com/rss/redshift-us-east-1.rss"},
+                {"name": "route53",     "url": "http://status.aws.amazon.com/rss/route53.rss"},
+                {"name": "ses",         "url": "http://status.aws.amazon.com/rss/ses-us-east-1.rss"},
+                {"name": "vpc",         "url": "http://status.aws.amazon.com/rss/vpc-us-east-1.rss"},
+            ]
+        },
+        {
+            "name": "NewRelic",
+            "feeds": [
+                {"name": "newrelic", "url": "http://status.newrelic.com/history.rss"}
+            ],
+            "outputs": {
+                "hipchat": {
+                    "match_body": true,
+                    "colors": {
+                        "<strong>Investigating</strong>":   "red",
+                        "<strong>Update</strong>":          "yellow",
+                        "<strong>Monitoring</strong>":      "yellow",
+                        "<strong>Resolved</strong>":        "green"
+                    }
+                }
+            }
+        },
+        {
+            "name": "Salesforce",
+            "feeds": [
+                {"name": "salesforce", "url": "http://status.salesforce.com/rest/rss/NA14"}
+            ]
+        }
+    ]
+}
