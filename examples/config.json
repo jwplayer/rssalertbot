@@ -31,7 +31,7 @@
                 {"name": "redshift",    "url": "http://status.aws.amazon.com/rss/redshift-us-east-1.rss"},
                 {"name": "route53",     "url": "http://status.aws.amazon.com/rss/route53.rss"},
                 {"name": "ses",         "url": "http://status.aws.amazon.com/rss/ses-us-east-1.rss"},
-                {"name": "vpc",         "url": "http://status.aws.amazon.com/rss/vpc-us-east-1.rss"},
+                {"name": "vpc",         "url": "http://status.aws.amazon.com/rss/vpc-us-east-1.rss"}
             ]
         },
         {
