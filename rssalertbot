@@ -181,7 +181,7 @@ class Feed(object):
         if not self.enable_email:
             return
 
-        smtp = Mailer(host=SMTP_HOST)
+        smtp = Mailer(host=self.email_server)
         message = Message(charset="utf-8", From=self.email_from, To=self.email_target,
             Subject = "{} Alert: ({}) {}".format(self.group, self.feed, entry.title))
         message.Body = "Feed: {}\nDate: {}\n\n{}".format(self.feed, entry.published, entry.description)
