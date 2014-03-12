@@ -184,7 +184,7 @@ class Feed(object):
         smtp = Mailer(host=self.email_server)
         message = Message(charset="utf-8", From=self.email_from, To=self.email_target,
             Subject = "{} Alert: ({}) {}".format(self.group, self.feed, entry.title))
-        message.Body = "Feed: {}\nDate: {}\n\n{}".format(self.feed, entry.published, entry.description)
+        message.Body = "Feed: {}\nDate: {}\n\n{}".format(self.feed, entry.published, entry.description.encode('utf-8'))
         smtp.send(message)
 
 
@@ -230,7 +230,7 @@ class Feed(object):
             feed=self.feed,
             date=entry.published,
             title=entry.title,
-            body=entry.description)
+            body=entry.description.encode('utf-8'))
 
         hipster.message_room(self.hipchat_room, self.group, message, 
                                 message_format='html', color=color, notify=True)
