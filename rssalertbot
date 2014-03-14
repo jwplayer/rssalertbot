@@ -232,8 +232,11 @@ class Feed(object):
             title=entry.title,
             body=entry.description.encode('utf-8'))
 
-        hipster.message_room(self.hipchat_room, self.group, message, 
+        try:
+            hipster.message_room(self.hipchat_room, self.group, message, 
                                 message_format='html', color=color, notify=True)
+        except urllib2.HTTPError, e:
+            log.error("Error contacting Hipchat for feed {}: {}".format(self.feed, e))
 
 
     def alert_log(self, entry):
