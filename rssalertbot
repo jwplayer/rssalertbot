@@ -138,7 +138,7 @@ class Feed(object):
                 log.error("Error: no data recieved for feed {}".format(self.feed))
                 return []
             return data.entries
-        except urllib2.HTTPError, e:
+        except (urllib2.HTTPError, urllib2.URLError) as e:
             log.error("Error fetching feed {}: {}".format(self.feed, e))
             return []
 
