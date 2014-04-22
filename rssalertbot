@@ -216,6 +216,8 @@ class Feed(object):
         if not color:
             if '[Update]' in matchstring:
                 color='yellow'
+            if '[Mitigated]' in matchstring:
+                color='yellow'
             elif '[Resolved]' in matchstring:
                 color='green'
             elif '[RESOLVED]' in matchstring:
