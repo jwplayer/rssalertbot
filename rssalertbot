@@ -183,7 +183,7 @@ class Feed(object):
 
         smtp = Mailer(host=self.email_server)
         message = Message(charset="utf-8", From=self.email_from, To=self.email_target,
-            Subject = "{} Alert: ({}) {}".format(self.group, self.feed, entry.title))
+            Subject = "{} Alert: ({}) {}".format(self.group, self.feed, entry.title.encode('utf-8')))
         message.Body = "Feed: {}\nDate: {}\n\n{}".format(self.feed, entry.published, entry.description.encode('utf-8'))
         smtp.send(message)
 
