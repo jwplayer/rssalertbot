@@ -104,7 +104,7 @@ class Feed(object):
         log.debug(" url: {}".format(self.url))
         log.debug(" datafile: {}".format(self.datafile))
 
-    
+
     @property
     def previous_date(self):
         if not self._previous_date:
@@ -235,7 +235,7 @@ class Feed(object):
             body=entry.description.encode('utf-8'))
 
         try:
-            hipster.message_room(self.hipchat_room, self.group, message, 
+            hipster.message_room(self.hipchat_room, self.group, message,
                                 message_format='html', color=color, notify=True)
         except urllib2.HTTPError, e:
             log.error("Error contacting Hipchat for feed {}: {}".format(self.feed, e))
@@ -246,7 +246,7 @@ class Feed(object):
         if not self.enable_log:
             return
 
-        log.warning("({}) {}: {}".format(self.feed, entry.published, entry.title))
+        log.warning("({}) {}: {}".format(self.feed, entry.published, entry.title.encode('utf-8')))
         log.debug("{}\n".format(entry.description.encode('utf-8')))
 
 
@@ -271,7 +271,7 @@ def readconfig(cfgfile):
     except IOError as e:
         log.error("Can't open config file: {}".format(e))
         sys.exit(-1)
-        
+
 
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser()
@@ -289,7 +289,7 @@ if __name__ == '__main__':
         log.setLevel(logging.INFO)
     elif opts.v == 1:
         log.setLevel(logging.WARNING)
-        
+
     cfg = readconfig(opts.config)
 
     if not 'state_path' in cfg:
