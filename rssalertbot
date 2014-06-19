@@ -231,7 +231,7 @@ class Feed(object):
         message = '<b>{feed}</b> {date}: {title}<br>{body}'.format(
             feed=self.feed,
             date=entry.published,
-            title=entry.title,
+            title=entry.title.encode('utf-8'),
             body=entry.description.encode('utf-8'))
 
         try:
