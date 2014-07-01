@@ -119,9 +119,9 @@ class Feed(object):
 
 
     def save_date(self, new_date):
-        # save the date
+        """save the date, as UTC always"""
         with open(self.datafile, 'wb') as f:
-            f.write(str(new_date))
+            f.write(str(new_date.astimezone(pytz.utc)))
 
 
     def entries(self):
@@ -146,6 +146,9 @@ class Feed(object):
     def process(self):
         """Fetch and process this feed"""
 
+        now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
+        log.debug("{} previous date:".format(self.feed,self.previous_date))
+
         new_date = None
         for entry in self.entries():
             # fix some bogus timezones
@@ -159,12 +162,18 @@ class Feed(object):
             if not new_date or date > new_date:
                 new_date = date
 
-            # only notify about new entries
-            if date > self.previous_date:
-                self.alert(entry)
+            # skip anything that's stale
+            if date <= (now - datetime.timedelta(days=1)):
+                continue
+
+            # and anything before the previous date
+            if date <= self.previous_date:
+                continue
+
+            self.alert(entry)
 
         if not new_date:
-            new_date = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
+            new_date = now
 
         self.save_date(new_date)
 

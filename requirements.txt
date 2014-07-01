@@ -1,0 +1,5 @@
+-e git://github.com/kurttheviking/python-simple-hipchat.git#egg=python-simple-hipchat
+feedparser==5.1.3
+mailer==0.7
+python-dateutil
+pytz>=2013.9
