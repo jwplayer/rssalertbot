@@ -12,6 +12,7 @@ import argparse
 import base64
 import datetime
 import hipchat
+import httplib
 import feedparser
 import json
 import logging
@@ -81,8 +82,11 @@ class Feed(object):
             self.password = group['password']
 
         if 'outputs' in group:
-            # configure email output
-            if self.enable_email and 'email' in group['outputs']:
+            # configure email output - default = disabled
+            if (self.enable_email and
+                    'email' in group['outputs'] and
+                    group['outputs']['email'].get('enabled', False)):
+
                 if 'to' in group['outputs']['email']:
                     self.email_target = group['outputs']['email']['to']
                 if 'from' in group['outputs']['email']:
@@ -138,7 +142,7 @@ class Feed(object):
                 log.error("Error: no data recieved for feed {}".format(self.feed))
                 return []
             return data.entries
-        except (urllib2.HTTPError, urllib2.URLError) as e:
+        except (httplib.BadStatusLine, urllib2.HTTPError, urllib2.URLError) as e:
             log.error("Error fetching feed {}: {}".format(self.feed, e))
             return []
 
