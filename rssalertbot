@@ -223,17 +223,7 @@ class Feed(object):
 
         # if color isn't set already, try some defaults
         if not color:
-            if '[Update]' in matchstring:
-                color='yellow'
-            if '[Mitigated]' in matchstring:
-                color='yellow'
-            elif '[Resolved]' in matchstring:
-                color='green'
-            elif '[RESOLVED]' in matchstring:
-                color='green'
-
-            else:
-                color='red'
+            color = guess_color(matchstring)
 
         hipster = hipchat.HipChat(token=self.hipchat_token)
 
@@ -257,6 +247,25 @@ class Feed(object):
 
         log.warning("({}) {}: {}".format(self.feed, entry.published, entry.title.encode('utf-8')))
         log.debug("{}\n".format(entry.description.encode('utf-8')))
+
+
+def guess_color(matchstring):
+    """Try to guess the color of the message"""
+
+    for key in ('&lt;strong&gt;Investigating',
+                '&lt;strong&gt;Identified', '&lt;strong&gt;Monitoring',
+                '&lt;strong&gt;Update',
+                '[Mitigated]', '[Update]',
+                'Investigating',
+                ):
+        if key in matchstring:
+            return 'yellow'
+
+    for key ('[Resolved]', '[RESOLVED]', '&lt;strong&gt;Resolved&'):
+        if key in  matchstring:
+            return 'green'
+
+    return 'red'
 
 
 def main(cfg):
