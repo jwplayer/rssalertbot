@@ -265,7 +265,7 @@ def guess_color(matchstring):
         if key in matchstring:
             return 'yellow'
 
-    for key ('[Resolved]', '[RESOLVED]', '&lt;strong&gt;Resolved&'):
+    for key in ('[Resolved]', '[RESOLVED]', '&lt;strong&gt;Resolved&'):
         if key in  matchstring:
             return 'green'
 
