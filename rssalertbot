@@ -84,6 +84,9 @@ class Feed(object):
         if 'outputs' in group:
             # configure email output
             if self.enable_email and 'email' in group['outputs']:
+                # enable/disable email here, default = false
+                self.enable_email = group['outputs']['email'].get('enabled', False)
+
                 if 'to' in group['outputs']['email']:
                     self.email_target = group['outputs']['email']['to']
                 if 'from' in group['outputs']['email']:
