@@ -37,6 +37,7 @@ BOGUS_TIMEZONES = {
 logging.basicConfig(level=logging.ERROR)
 log = logging.getLogger()
 
+
 class Feed(object):
     """Base class for feeds"""
     group = "FeedBot"
@@ -147,7 +148,7 @@ class Feed(object):
         """Fetch and process this feed"""
 
         now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
-        log.debug("{} previous date:".format(self.feed,self.previous_date))
+        log.debug("{} previous date:".format(self.feed, self.previous_date))
 
         new_date = None
         for entry in self.entries():
@@ -192,7 +193,7 @@ class Feed(object):
 
         smtp = Mailer(host=self.email_server)
         message = Message(charset="utf-8", From=self.email_from, To=self.email_target,
-            Subject = "{} Alert: ({}) {}".format(self.group, self.feed, entry.title.encode('utf-8')))
+                          Subject = "{} Alert: ({}) {}".format(self.group, self.feed, entry.title.encode('utf-8')))
         message.Body = "Feed: {}\nDate: {}\n\n{}".format(self.feed, entry.published, entry.description.encode('utf-8'))
         smtp.send(message)
 
@@ -216,7 +217,7 @@ class Feed(object):
             matches = '(' + '|'.join(self.hipchat_colors.keys()) + ')'
             m = re.search(matches, matchstring)
             if m:
-                for (s,c) in self.hipchat_colors.items():
+                for (s, c) in self.hipchat_colors.items():
                     if s in m.groups(1):
                         color = c
                         break
@@ -224,16 +225,16 @@ class Feed(object):
         # if color isn't set already, try some defaults
         if not color:
             if '[Update]' in matchstring:
-                color='yellow'
+                color = 'yellow'
             if '[Mitigated]' in matchstring:
-                color='yellow'
+                color = 'yellow'
             elif '[Resolved]' in matchstring:
-                color='green'
+                color = 'green'
             elif '[RESOLVED]' in matchstring:
-                color='green'
+                color = 'green'
 
             else:
-                color='red'
+                color = 'red'
 
         hipster = hipchat.HipChat(token=self.hipchat_token)
 
@@ -245,7 +246,7 @@ class Feed(object):
 
         try:
             hipster.message_room(self.hipchat_room, self.group, message,
-                                message_format='html', color=color, notify=True)
+                                 message_format='html', color=color, notify=True)
         except urllib2.HTTPError, e:
             log.error("Error contacting Hipchat for feed {}: {}".format(self.feed, e))
 
@@ -285,9 +286,9 @@ def readconfig(cfgfile):
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser()
     argparser.add_argument('-c', '--config', type=str, default="config.json",
-                            help="config file (default: ./config.json)")
+                           help="config file (default: ./config.json)")
     argparser.add_argument('--state_path', type=str,
-                            help="state path (default: config file 'state_path')")
+                           help="state path (default: config file 'state_path')")
     argparser.add_argument('-v', action='count')
 
     opts = argparser.parse_args(sys.argv[1:])
@@ -301,7 +302,7 @@ if __name__ == '__main__':
 
     cfg = readconfig(opts.config)
 
-    if not 'state_path' in cfg:
+    if 'state_path' not in cfg:
         cfg['state_path'] = ''
 
     # allow command-line override
