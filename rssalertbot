@@ -4,10 +4,6 @@ RSS feed monitoring robot.
 
 """
 
-__author__    = 'Michael Stella <michael@jwplayer.com>'
-__copyright__ = "Copyright 2014 Long Tail Ad Solutions"
-__version__   = "1.0"
-
 import argparse
 import base64
 import datetime
@@ -22,7 +18,13 @@ import re
 import sys
 import urllib2
 from dateutil import parser as dateparser
+from HTMLParser import HTMLParser
 from mailer import Mailer, Message
+
+__author__    = 'Michael Stella <michael@jwplayer.com>'
+__copyright__ = "Copyright 2014 Long Tail Ad Solutions"
+__version__   = "1.0"
+
 
 BOGUS_TIMEZONES = {
     'PST': '-0800',
@@ -195,10 +197,12 @@ class Feed(object):
         if not self.enable_email:
             return
 
+        description = strip_html(entry.description)
+
         smtp = Mailer(host=self.email_server)
         message = Message(charset="utf-8", From=self.email_from, To=self.email_target,
                           Subject = "{} Alert: ({}) {}".format(self.group, self.feed, entry.title.encode('utf-8')))
-        message.Body = "Feed: {}\nDate: {}\n\n{}".format(self.feed, entry.published, entry.description.encode('utf-8'))
+        message.Body = "Feed: {}\nDate: {}\n\n{}".format(self.feed, entry.published, description.encode('utf-8'))
         smtp.send(message)
 
 
@@ -241,7 +245,7 @@ class Feed(object):
         try:
             hipster.message_room(self.hipchat_room, self.group, message,
                                  message_format='html', color=color, notify=True)
-        except urllib2.HTTPError, e:
+        except urllib2.HTTPError as e:
             log.error("Error contacting Hipchat for feed {}: {}".format(self.feed, e))
 
 
@@ -252,6 +256,26 @@ class Feed(object):
 
         log.warning("({}) {}: {}".format(self.feed, entry.published, entry.title.encode('utf-8')))
         log.debug("{}\n".format(entry.description.encode('utf-8')))
+
+
+class HTMLStripper(HTMLParser):
+    def __init__(self):
+        self.reset()
+        self.fed = []
+        self.strict = False
+        self.convert_charrefs = True
+
+    def handle_data(self, d):
+        self.fed.append(d)
+
+    def get_data(self):
+        return ''.join(self.fed)
+
+
+def strip_html(html):
+    s = HTMLStripper()
+    s.feed(html)
+    return s.get_data()
 
 
 def guess_color(matchstring):
