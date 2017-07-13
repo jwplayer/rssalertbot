@@ -4,7 +4,7 @@ from setuptools import setup
 
 setup(
     name            = 'rssalertbot',
-    version         = '1.0.3',
+    version         = '1.0.4',
     description     = 'RSS fetch and alert bot',
     author          = 'Michael Stella',
     author_email    = 'michael@jwplayer.com',

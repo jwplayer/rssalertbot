@@ -275,6 +275,10 @@ class HTMLStripper(HTMLParser):
 
 
 def strip_html(html):
+    # first try to replace breaks with newlines
+    html = html.replace('<br>', '\n')
+    html = html.replace('<br/>', '\n')
+
     s = HTMLStripper()
     s.feed(html)
     return s.get_data()
@@ -283,13 +287,13 @@ def strip_html(html):
 def guess_color(matchstring):
     """Try to guess the color of the message"""
 
-    for key in KEYS_YELLOW:
-        if key in matchstring:
-            return 'yellow'
-
     for key in KEYS_GREEN:
         if key in matchstring:
             return 'green'
+
+    for key in KEYS_YELLOW:
+        if key in matchstring:
+            return 'yellow'
 
     return 'red'
 
