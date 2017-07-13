@@ -25,6 +25,8 @@ __author__    = 'Michael Stella <michael@jwplayer.com>'
 __copyright__ = "Copyright 2014 Long Tail Ad Solutions"
 __version__   = "1.0"
 
+KEYS_GREEN  = ('Completed', 'Resolved')
+KEYS_YELLOW = ('Identified', 'Monitoring', 'Update', 'Mitigated', 'Update', 'Scheduled')
 
 BOGUS_TIMEZONES = {
     'PST': '-0800',
@@ -281,16 +283,11 @@ def strip_html(html):
 def guess_color(matchstring):
     """Try to guess the color of the message"""
 
-    for key in ('&lt;strong&gt;Investigating',
-                '&lt;strong&gt;Identified', '&lt;strong&gt;Monitoring',
-                '&lt;strong&gt;Update',
-                '[Mitigated]', '[Update]',
-                'Investigating',
-                ):
+    for key in KEYS_YELLOW:
         if key in matchstring:
             return 'yellow'
 
-    for key in ('[Resolved]', '[RESOLVED]', '&lt;strong&gt;Resolved&'):
+    for key in KEYS_GREEN:
         if key in matchstring:
             return 'green'
 
