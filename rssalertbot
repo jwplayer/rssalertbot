@@ -23,9 +23,9 @@ from mailer import Mailer, Message
 
 __author__    = 'Michael Stella <michael@jwplayer.com>'
 __copyright__ = "Copyright 2014 Long Tail Ad Solutions"
-__version__   = "1.0"
+__version__   = "1.0.4"
 
-KEYS_GREEN  = ('Completed', 'Resolved')
+KEYS_GREEN  = ('Completed', 'Resolved', 'RESOLVED')
 KEYS_YELLOW = ('Identified', 'Monitoring', 'Update', 'Mitigated', 'Update', 'Scheduled')
 
 BOGUS_TIMEZONES = {
@@ -276,8 +276,9 @@ class HTMLStripper(HTMLParser):
 
 def strip_html(html):
     # first try to replace breaks with newlines
-    html = html.replace('<br>', '\n')
-    html = html.replace('<br/>', '\n')
+    #html = html.replace('<br>', '\n')
+    #html = html.replace('<br/>', '\n')
+    #html = html.replace('&lt;br&gt;', '\n')
 
     s = HTMLStripper()
     s.feed(html)
