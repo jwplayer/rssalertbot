@@ -8,22 +8,27 @@ import argparse
 import base64
 import datetime
 import hipchat
-import httplib
 import feedparser
 import json
 import logging
 import os
 import pytz
 import re
+import requests
 import sys
-import urllib2
-from dateutil import parser as dateparser
-from HTMLParser import HTMLParser
-from mailer import Mailer, Message
+
+from dateutil       import parser as dateparser
+from html.parser    import HTMLParser
+from mailer         import Mailer, Message
+from pkg_resources  import get_distribution, DistributionNotFound
 
 __author__    = 'Michael Stella <michael@jwplayer.com>'
-__copyright__ = "Copyright 2014 Long Tail Ad Solutions"
-__version__   = "1.0.4"
+
+try:
+    __version__ = get_distribution('rssalertbot').version
+except DistributionNotFound:
+    # package is not installed
+    __version__ = '0.1.0-alpha'
 
 KEYS_GREEN  = ('Completed', 'Resolved', 'RESOLVED')
 KEYS_YELLOW = ('Identified', 'Monitoring', 'Update', 'Mitigated', 'Update', 'Scheduled')
@@ -39,11 +44,12 @@ BOGUS_TIMEZONES = {
     'EDT': '-0400',
 }
 
-logging.basicConfig(level=logging.ERROR)
+logging.basicConfig(level=logging.ERROR,
+                    format='%(levelname)-7s [%(module)s.%(funcName)s:%(lineno)d] %(message)s')
 log = logging.getLogger()
 
 
-class Feed(object):
+class Feed():
     """Base class for feeds"""
     group = "FeedBot"
 
@@ -78,6 +84,12 @@ class Feed(object):
         if 'log' in outputs:
             self.enable_log     = outputs['log']['enabled']
 
+        # do the global notification disable
+        if cfg.get('no_notify', False):
+            log.debug("Note: notifications disabled")
+            self.enable_email = False
+            self.enable_hipchat = False
+
         self.group = group['name']
 
         # configure fetch user/password
@@ -108,10 +120,10 @@ class Feed(object):
 
         self._previous_date = None
 
-        self.datafile = os.path.join(cfg['state_path'], 'last.{}.dat'.format(self.feed))
+        self.datafile = os.path.join(cfg['state_path'], f'last.{self.feed}.dat')
 
-        log.debug(" url: {}".format(self.url))
-        log.debug(" datafile: {}".format(self.datafile))
+        log.debug(f" url: {self.url}")
+        log.debug(f" datafile: {self.datafile}")
 
 
     @property
@@ -130,25 +142,25 @@ class Feed(object):
     def save_date(self, new_date):
         """save the date, as UTC always"""
         with open(self.datafile, 'wb') as f:
-            f.write(str(new_date.astimezone(pytz.utc)))
+            f.write(str(new_date.astimezone(pytz.utc)).encode('utf-8'))
 
 
     def entries(self):
         """Fetch and return a list of entries"""
-        req = urllib2.Request(self.url)
+        headers = {}
         if self.username and self.password:
-            req.add_header('Authorization',
-                           'Basic ' + base64.urlsafe_b64encode('{0}:{1}'.format(self.username, self.password)))
+            creds = f'{self.username}:{self.password}'.encode('utf-8')
+            headers['Authorization'] = 'Basic {}'.format(base64.urlsafe_b64encode(creds))
 
         try:
-            rsp = urllib2.urlopen(req)
-            data = feedparser.parse(rsp.read())
+            rsp = requests.get(self.url, headers=headers)
+            data = feedparser.parse(rsp.text)
             if not data:
-                log.error("Error: no data recieved for feed {}".format(self.feed))
+                log.error(f"Error: no data recieved for feed {self.feed}")
                 return []
             return data.entries
-        except (httplib.BadStatusLine, urllib2.HTTPError, urllib2.URLError) as e:
-            log.error("Error fetching feed {}: {}".format(self.feed, e))
+        except Exception as e:
+            log.error(f"Error fetching feed {self.feed}: {e}")
             return []
 
 
@@ -156,14 +168,15 @@ class Feed(object):
         """Fetch and process this feed"""
 
         now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
-        log.debug("{} previous date:".format(self.feed, self.previous_date))
+        log.debug(f"{self.feed} previous date: {self.previous_date}")
 
         new_date = None
         for entry in self.entries():
             # fix some bogus timezones
             m = re.search(' ([PMCE][DS]T)$', entry.published)
             if m:
-                entry.published = entry.published.replace(m.group(1), BOGUS_TIMEZONES[m.group(1)])
+                entry.published = entry.published.replace(m.group(1),
+                                                          BOGUS_TIMEZONES[m.group(1)])
 
             date = dateparser.parse(entry.published)
 
@@ -203,8 +216,8 @@ class Feed(object):
 
         smtp = Mailer(host=self.email_server)
         message = Message(charset="utf-8", From=self.email_from, To=self.email_target,
-                          Subject = "{} Alert: ({}) {}".format(self.group, self.feed, entry.title.encode('utf-8')))
-        message.Body = "Feed: {}\nDate: {}\n\n{}".format(self.feed, entry.published, description.encode('utf-8'))
+                          Subject = f"{self.group} Alert: ({self.feed}) {entry.title}")
+        message.Body = f"Feed: {self.feed}\nDate: {entry.published}\n\n{description}"
         smtp.send(message)
 
 
@@ -241,14 +254,14 @@ class Feed(object):
         message = '<b>{feed}</b> {date}: {title}<br>{body}'.format(
             feed=self.feed,
             date=entry.published,
-            title=entry.title.encode('utf-8'),
-            body=entry.description.encode('utf-8'))
+            title=entry.title,
+            body=entry.description)
 
         try:
             hipster.message_room(self.hipchat_room, self.group, message,
                                  message_format='html', color=color, notify=True)
-        except urllib2.HTTPError as e:
-            log.error("Error contacting Hipchat for feed {}: {}".format(self.feed, e))
+        except Exception as e:
+            log.error(f"Error contacting Hipchat for feed {self.feed}: {e}")
 
 
     def alert_log(self, entry):
@@ -256,8 +269,8 @@ class Feed(object):
         if not self.enable_log:
             return
 
-        log.warning("({}) {}: {}".format(self.feed, entry.published, entry.title.encode('utf-8')))
-        log.debug("{}\n".format(entry.description.encode('utf-8')))
+        log.warning(f"({self.feed}) {entry.published}: {entry.title}")
+        log.debug(f"{entry.description}")
 
 
 class HTMLStripper(HTMLParser):
@@ -301,24 +314,24 @@ def guess_color(matchstring):
 
 def main(cfg):
     for group in cfg['feedgroups']:
-        log.info("Fetching feeds for {}".format(group['name']))
+        log.info(f"Fetching feeds for {group['name']}")
 
         for f in group['feeds']:
-            log.info(" Fetching feed '{}'".format(f['name']))
+            log.info(f" Fetching feed '{f['name']}'")
             feed = Feed(cfg, group, f['name'], f['url'])
             feed.process()
 
 
 def readconfig(cfgfile):
     """Read config file"""
-    log.debug("Reading config from {}".format(cfgfile))
+    log.debug(f"Reading config from {cfgfile}")
     try:
         cfg = None
         with open(cfgfile, 'rb') as f:
             cfg = json.loads(f.read())
         return cfg
     except IOError as e:
-        log.error("Can't open config file: {}".format(e))
+        log.error(f"Can't open config file: {e}")
         sys.exit(-1)
 
 
@@ -326,9 +339,15 @@ if __name__ == '__main__':
     argparser = argparse.ArgumentParser()
     argparser.add_argument('-c', '--config', type=str, default="config.json",
                            help="config file (default: ./config.json)")
+
     argparser.add_argument('--state_path', type=str,
                            help="state path (default: config file 'state_path')")
-    argparser.add_argument('-v', action='count')
+    argparser.add_argument('--no-notify', action='store_true',
+                           help="Disable all notifications globally")
+    argparser.add_argument('-v', action='count',
+                           help="Verbose - repeat for increased debugging")
+    argparser.add_argument('--version',  action='version',
+                           version='%(prog)s {}'.format(__version__))
 
     opts = argparser.parse_args(sys.argv[1:])
 
@@ -341,6 +360,9 @@ if __name__ == '__main__':
 
     cfg = readconfig(opts.config)
 
+    if opts.no_notify:
+        cfg['no_notify'] = True
+
     if 'state_path' not in cfg:
         cfg['state_path'] = ''
 
@@ -349,9 +371,9 @@ if __name__ == '__main__':
         cfg['state_path'] = opts.state_path
 
     if cfg['state_path'] and not os.path.isdir(cfg['state_path']):
-        os.mkdirs(cfg['state_path'])
+        os.makedirs(cfg['state_path'])
         if not os.path.isdir(cfg['state_path']):
-            log.error("State path '{}' does not exist and we can't create it".format(cfg['state_path']))
+            log.error(f"State path '{cfg['state_path']}' does not exist and we can't create it")
             sys.exit(-1)
 
     main(cfg)
