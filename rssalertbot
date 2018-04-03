@@ -49,7 +49,7 @@ logging.basicConfig(level=logging.ERROR,
 log = logging.getLogger()
 
 
-class Feed():
+class Feed:
     """Base class for feeds"""
     group = "FeedBot"
 
@@ -78,7 +78,7 @@ class Feed():
         if 'email' in outputs:
             self.enable_email   = outputs['email']['enabled']
             self.email_target   = outputs['email']['to']
-            self.email_from     = "{} Feeds <{}>".format(group['name'], outputs['email']['from'])
+            self.email_from     = f"{group['name']} Feeds <{outputs['email']['from']}>"
             self.email_server   = outputs['email']['server']
 
         if 'log' in outputs:
@@ -150,7 +150,7 @@ class Feed():
         headers = {}
         if self.username and self.password:
             creds = f'{self.username}:{self.password}'.encode('utf-8')
-            headers['Authorization'] = 'Basic {}'.format(base64.urlsafe_b64encode(creds))
+            headers['Authorization'] = f'Basic {base64.urlsafe_b64encode(creds)}'
 
         try:
             rsp = requests.get(self.url, headers=headers)
@@ -347,7 +347,7 @@ if __name__ == '__main__':
     argparser.add_argument('-v', action='count',
                            help="Verbose - repeat for increased debugging")
     argparser.add_argument('--version',  action='version',
-                           version='%(prog)s {}'.format(__version__))
+                           version=f'%(prog)s {__version__}')
 
     opts = argparser.parse_args(sys.argv[1:])
 
