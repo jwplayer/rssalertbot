@@ -28,7 +28,7 @@ setup(
     scripts         = ['rssalertbot'],
     install_requires = [
         'requests',
-        'feedparser==5.1.3',
+        'feedparser==5.2.1',
         'mailer',
         'python-dateutil',
         'pytz>=2013.9',

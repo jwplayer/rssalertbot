@@ -141,8 +141,8 @@ class Feed:
 
     def save_date(self, new_date):
         """save the date, as UTC always"""
-        with open(self.datafile, 'wb') as f:
-            f.write(str(new_date.astimezone(pytz.utc)).encode('utf-8'))
+        with open(self.datafile, 'w') as f:
+            f.write(str(new_date.astimezone(pytz.utc)))
 
 
     def entries(self):
@@ -327,7 +327,7 @@ def readconfig(cfgfile):
     log.debug(f"Reading config from {cfgfile}")
     try:
         cfg = None
-        with open(cfgfile, 'rb') as f:
+        with open(cfgfile, 'r') as f:
             cfg = json.loads(f.read())
         return cfg
     except IOError as e:
@@ -351,12 +351,13 @@ if __name__ == '__main__':
 
     opts = argparser.parse_args(sys.argv[1:])
 
-    if opts.v >= 3:
-        log.setLevel(logging.DEBUG)
-    elif opts.v == 2:
-        log.setLevel(logging.INFO)
-    elif opts.v == 1:
-        log.setLevel(logging.WARNING)
+    if opts.v:
+        if opts.v >= 3:
+            log.setLevel(logging.DEBUG)
+        elif opts.v == 2:
+            log.setLevel(logging.INFO)
+        elif opts.v == 1:
+            log.setLevel(logging.WARNING)
 
     cfg = readconfig(opts.config)
 
