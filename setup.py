@@ -28,10 +28,10 @@ setup(
     scripts         = ['rssalertbot'],
     install_requires = [
         'requests',
-        'feedparser',
+        'feedparser==5.1.3',
         'mailer',
         'python-dateutil',
-        'pytz',
+        'pytz>=2013.9',
         'python-simple-hipchat==0.4.0',
     ],
     python_requires = ">=3.6",
