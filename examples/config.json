@@ -1,61 +1,188 @@
 {
-    "state_path":   "var",
+    "state_path": "/var/run/rss_state",
 
     "outputs": {
         "hipchat": {
-            "enabled":  false,
-            "token":    "875020079",
-            "room":     "138",
+            "enabled":  true,
+            "token":    "<hipchat token>",
+            "room":     "1234567",
             "user":     "feedbot"
         },
         "email": {
-            "enabled":  false,
+            "enabled":  true,
             "server":   "localhost",
-            "from":     "feedbot@example.com",
-            "to":       "System Alerts <alerts@example.com>"
+            "from":     "feedbot@jwplayer.com",
+            "to":       "System Alerts <devops@jwplayer.com>"
         },
         "log": {
             "enabled":  true
+        },
+        "slack": {
+            "enabled":  true,
+            "token":    "<slack token>",
+            "channel":  "#channel"
         }
     },
-        
+
     "feedgroups": [
         {
-            "name": "AWS",
+            "name":     "EdgeCast",
+            "username": "ecrss@jwplayer.com",
+            "password": "edgecastrss",
             "feeds": [
-                {"name": "cloudfront",  "url": "http://status.aws.amazon.com/rss/cloudfront.rss"},
-                {"name": "ec2",         "url": "http://status.aws.amazon.com/rss/ec2-us-east-1.rss"},
-                {"name": "elb",         "url": "http://status.aws.amazon.com/rss/elb-us-east-1.rss"},
-                {"name": "emr",         "url": "http://status.aws.amazon.com/rss/emr-us-east-1.rss"},
-                {"name": "elasticache", "url": "http://status.aws.amazon.com/rss/elasticache-us-east-1.rss"},
-                {"name": "redshift",    "url": "http://status.aws.amazon.com/rss/redshift-us-east-1.rss"},
-                {"name": "route53",     "url": "http://status.aws.amazon.com/rss/route53.rss"},
-                {"name": "ses",         "url": "http://status.aws.amazon.com/rss/ses-us-east-1.rss"},
-                {"name": "vpc",         "url": "http://status.aws.amazon.com/rss/vpc-us-east-1.rss"}
-            ]
-        },
-        {
-            "name": "NewRelic",
-            "feeds": [
-                {"name": "newrelic", "url": "http://status.newrelic.com/history.rss"}
+                {"name": "httplarge", "url":  "https://status.verizondigitalmedia.com/pages/5736344c90417cda1a000f3f/rss" }
             ],
             "outputs": {
+                "email": {
+                    "from":     "EdgeCast Feeds <edgecast.alerts@jwplayer.com>",
+                    "to":       "EdgeCast Alerts <edgecast.alerts@jwplayer.com>"
+                },
                 "hipchat": {
                     "match_body": true,
                     "colors": {
-                        "<strong>Investigating</strong>":   "red",
-                        "<strong>Update</strong>":          "yellow",
-                        "<strong>Monitoring</strong>":      "yellow",
-                        "<strong>Resolved</strong>":        "green"
+                        "[Mitigated]":   "yellow"
                     }
+                },
+                "slack": {
+                    "channel":  "#anotherchannel"
                 }
             }
         },
         {
-            "name": "Salesforce",
+            "name": "Fastly",
             "feeds": [
-                {"name": "salesforce", "url": "http://status.salesforce.com/rest/rss/NA14"}
+                {"name": "Fastly", "url": "https://status.fastly.com/history.rss"}
+            ],
+            "outputs": {
+                "hipchat": {
+                    "match_body": true
+                },
+                "email": {
+                    "enabled": false
+                }
+            }
+        },
+        {
+            "name": "DataDog",
+            "feeds": [
+                {"name": "DataDog", "url": "http://status.datadoghq.com/history.rss"}
+            ],
+            "outputs": {
+                "email": {
+                    "enabled": false
+                }
+            }
+        },
+        {
+            "name": "Google",
+            "feeds": [
+                {"name": "googleapps", "url": "http://www.google.com/appsstatus/rss/en"}
+            ],
+            "outputs": {
+                "email": {
+                    "enabled": false
+                },
+                "hipchat": {
+                    "match_body": true
+                }
+            }
+        },
+        {
+            "name": "Testing",
+            "feeds": [
+                {"name": "testing", "url": "http://opsweb.longtailvideo.com/test.rss"}
+            ],
+            "outputs": {
+                "hipchat": {
+                    "match_body": true
+                }
+            }
+        },
+        {
+            "name": "DockerHub",
+            "feeds": [
+                {"name": "dockerhub", "url": "http://status.docker.com/pages/533c6539221ae15e3f000031/rss"}
+            ],
+            "outputs": {
+                "hipchat": {
+                    "match_body": true
+                },
+                "email": {
+                    "enabled": false
+                }
+            }
+        },
+        {
+            "name": "Statuspage",
+            "feeds": [
+                {"name": "statuspage", "url": "http://metastatuspage.com/history.rss"}
+            ],
+            "outputs": {
+                "hipchat": {
+                    "match_body": true
+                }
+            }
+        },
+        {
+            "name": "Atlassian",
+            "feeds": [
+                {"name": "atlassian", "url": "http://status.atlassian.com/history.rss"}
+            ],
+            "outputs": {
+                "email": {
+                    "enabled": false
+                },
+                "hipchat": {
+                    "match_body": true
+                }
+            }
+        },
+        {
+            "name": "AWS",
+            "feeds": [
+                {"name": "autoscaling", "url": "http://status.aws.amazon.com/rss/autoscaling-us-east-1.rss"},
+                {"name": "cloudfront",  "url": "http://status.aws.amazon.com/rss/cloudfront.rss"},
+                {"name": "dynamodb",    "url": "http://status.aws.amazon.com/rss/dynamodb-us-east-1.rss"},
+                {"name": "ec2",         "url": "http://status.aws.amazon.com/rss/ec2-us-east-1.rss"},
+                {"name": "elb",         "url": "http://status.aws.amazon.com/rss/elb-us-east-1.rss"},
+                {"name": "emr",         "url": "http://status.aws.amazon.com/rss/emr-us-east-1.rss"},
+                {"name": "elasticache", "url": "http://status.aws.amazon.com/rss/elasticache-us-east-1.rss"},
+                {"name": "iam",         "url": "http://status.aws.amazon.com/rss/iam.rss"},
+                {"name": "internet",    "url": "http://status.aws.amazon.com/rss/internetconnectivity-us-east-1.rss"},
+                {"name": "natgateway",  "url": "http://status.aws.amazon.com/rss/natgateway-us-east-1.rss"},
+                {"name": "rds",         "url": "http://status.aws.amazon.com/rss/rds-us-east-1.rss"},
+                {"name": "route53",     "url": "http://status.aws.amazon.com/rss/route53.rss"},
+                {"name": "ses",         "url": "http://status.aws.amazon.com/rss/ses-us-east-1.rss"},
+                {"name": "sqs",         "url": "http://status.aws.amazon.com/rss/sqs-us-east-1.rss"},
+                {"name": "simpledb",    "url": "http://status.aws.amazon.com/rss/simpledb-us-east-1.rss"},
+                {"name": "s3",          "url": "http://status.aws.amazon.com/rss/s3-us-standard.rss"},
+                {"name": "vpc",         "url": "http://status.aws.amazon.com/rss/vpc-us-east-1.rss"}
+            ],
+            "outputs": {
+                "email": {
+                    "enabled": true
+                }
+            }
+        },
+        {
+            "name": "WPEngine",
+            "feeds": [
+                {"name": "wpengine", "url": "http://wpengine.wordpress.com/feed/"}
             ]
+        },
+        {
+            "name": "Recurly",
+            "feeds": [
+                {"name": "recurly", "url": "https://status.recurly.com/history.rss"}
+            ],
+            "outputs": {
+                "email": {
+                    "enabled": false
+                },
+                "hipchat": {
+                    "match_body": true
+                }
+            }
         }
     ]
 }

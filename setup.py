@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3.6
 
 import os
 import re
@@ -33,6 +33,8 @@ setup(
         'python-dateutil',
         'pytz>=2013.9',
         'python-simple-hipchat==0.4.0',
+        'slackclient',
+        'html2text'
     ],
     python_requires = ">=3.6",
     classifiers     = [

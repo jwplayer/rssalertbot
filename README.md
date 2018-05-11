@@ -13,6 +13,11 @@ Create a config.json, with at the minimum, an entry in "outputs" and at least on
     "outputs": {
         "log": {
             "enabled":  true
+        },
+        "slack": {
+            "enabled":  true,
+            "token":    "<your slack token goes here>",
+            "channel":  "#channel"
         }
     },
         
@@ -21,7 +26,12 @@ Create a config.json, with at the minimum, an entry in "outputs" and at least on
             "name": "AWS",
             "feeds": [
                 {"name": "cloudfront",  "url": "http://status.aws.amazon.com/rss/cloudfront.rss"},
-            ]
+            ],
+            "outputs": {
+                "slack": {
+                    "channel": "#anotherchannel"
+                }
+            }
         } 
     ]
 }
