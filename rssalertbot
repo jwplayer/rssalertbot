@@ -1,6 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
-RSS feed monitoring robot.
+RSS feed monitoring robot for slack.
 
 """
 
@@ -24,8 +24,7 @@ from mailer         import Mailer, Message
 from pkg_resources  import get_distribution, DistributionNotFound
 from slackclient    import SlackClient
 
-__author__    = 'Michael Stella <michael@jwplayer.com>'
-
+__author__    = 'JW Player <devops@jwplayer.com>'
 
 try:
     __version__ = get_distribution('rssalertbot').version
@@ -63,6 +62,9 @@ class Feed:
 
     hipchat_colors  = {}
     hipchat_match_body = False
+
+    slack_colors = {}
+    slack_match_body = False
 
     username = None
     password = None
@@ -131,6 +133,10 @@ class Feed:
             if self.enable_slack and 'slack' in group['outputs']:
                 if 'channel' in group['outputs']['slack']:
                     self.slack_channel = group['outputs']['slack']['channel']
+                if 'colors' in group['outputs']['slack']:
+                    self.slack_colors = group['outputs']['slack']['colors']
+                if 'match_body' in group['outputs']['slack']:
+                    self.slack_match_body = group['outputs']['slack']['match_body']
 
         self._previous_date = None
 
@@ -262,7 +268,7 @@ class Feed:
 
         # if color isn't set already, try some defaults
         if not color:
-            color = guess_color(matchstring)
+            color = guess_color(matchstring)['hipchat_color']
 
         hipster = hipchat.HipChat(token=self.hipchat_token)
 
@@ -287,21 +293,47 @@ class Feed:
         log.warning(f"({self.feed}) {entry.published}: {entry.title}")
         log.debug(f"{entry.description}")
 
-    def alert_slack(self, entry):
-        """Sends alert slack"""
+    def alert_slack(self, entry, color=None):
+        """Sends alert to slack"""
 
         if not self.enable_slack:
             return
 
+        matchstring = entry.title
+        if self.slack_match_body:
+            matchstring += entry.description
+
+        # guess color
+        if self.slack_colors:
+            matches = '(' + '|'.join(self.slack_colors.keys()) + ')'
+            m = re.search(matches, matchstring)
+            if m:
+                for (s, c) in self.slack_colors.items():
+                    if s in m.groups(1):
+                        color = c
+                        break
+
+        # if color isn't set already, try some defaults
+        if not color:
+            color = guess_color(matchstring)['slack_color']
+
+        # cleanup description to get it supported by slack - might figure out something more elegant later
+        desc = html2text.html2text(entry.description)
+        desc = desc.replace('**', '*')
+        desc = desc.replace('\\', '')
+        desc = desc.replace('<', '&lt;')
+        desc = desc.replace('>', '&gt;')
+        desc = desc.replace('&', '&amp;')
+
         attachments = attachments = [
             {
-                "pretext": self.feed+" "+entry.published,
-                "title": entry.title,
-                "text": html2text.html2text(entry.description),
+                "title": self.feed+' '+entry.published+':'+entry.title,
+                "text": desc,
                 "mrkdwn_in": [
-                    "text",
-                    "pretext"
-                ]
+                    "title",
+                    "text"
+                ],
+                "color": color
             }
         ]
 
@@ -348,13 +380,13 @@ def guess_color(matchstring):
 
     for key in KEYS_GREEN:
         if key in matchstring:
-            return 'green'
+            return {"hipchat_color": "green", "slack_color": "#3aa459"}
 
     for key in KEYS_YELLOW:
         if key in matchstring:
-            return 'yellow'
+            return {"hipchat_color": "yellow", "slack_color": "#f5c243"}
 
-    return 'red'
+    return {"hipchat_color": "red", "slack_color": "#e73022"}
 
 
 def main(cfg):
