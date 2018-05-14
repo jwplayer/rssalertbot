@@ -343,7 +343,9 @@ class Feed:
                 "chat.postMessage",
                 channel=self.slack_channel,
                 attachments=attachments,
-                icon_emoji=':information_source:'
+                icon_emoji=':information_source:',
+                as_user=False,
+                username=self.feed
             )
 
         except Exception as e:
