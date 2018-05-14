@@ -325,7 +325,7 @@ class Feed:
         desc = desc.replace('>', '&gt;')
         desc = desc.replace('&', '&amp;')
 
-        attachments = attachments = [
+        attachments = [
             {
                 "title": self.feed+' '+entry.published+':'+entry.title,
                 "text": desc,
