@@ -327,7 +327,7 @@ class Feed:
 
         attachments = [
             {
-                "title": self.feed+' '+entry.published+':'+entry.title,
+                "title": self.feed+' '+entry.published+'\n'+entry.title,
                 "text": desc,
                 "mrkdwn_in": [
                     "title",
