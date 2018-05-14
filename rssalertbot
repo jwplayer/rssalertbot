@@ -380,13 +380,13 @@ def guess_color(matchstring):
 
     for key in KEYS_GREEN:
         if key in matchstring:
-            return {"hipchat_color": "green", "slack_color": "#3aa459"}
+            return {"hipchat_color": "green", "slack_color": "good"}
 
     for key in KEYS_YELLOW:
         if key in matchstring:
-            return {"hipchat_color": "yellow", "slack_color": "#f5c243"}
+            return {"hipchat_color": "yellow", "slack_color": "warning"}
 
-    return {"hipchat_color": "red", "slack_color": "#e73022"}
+    return {"hipchat_color": "red", "slack_color": "danger"}
 
 
 def main(cfg):
