@@ -32,6 +32,8 @@ except DistributionNotFound:
     # package is not installed
     __version__ = '0.1.0-alpha'
 
+BOT_USERNAME = 'RSS Alert Bot'
+
 KEYS_GREEN  = ('Completed', 'Resolved', 'RESOLVED')
 KEYS_YELLOW = ('Identified', 'Monitoring', 'Update', 'Mitigated', 'Update', 'Scheduled')
 
@@ -345,7 +347,7 @@ class Feed:
                 attachments=attachments,
                 icon_emoji=':information_source:',
                 as_user=False,
-                username=self.feed
+                username=BOT_USERNAME
             )
 
         except Exception as e:
