@@ -17,6 +17,7 @@ import re
 import requests
 import sys
 import html2text
+import zc.lockfile
 
 from dateutil       import parser as dateparser
 from html.parser    import HTMLParser
@@ -36,6 +37,8 @@ BOT_USERNAME = 'RSS Alert Bot'
 
 KEYS_GREEN  = ('Completed', 'Resolved', 'RESOLVED')
 KEYS_YELLOW = ('Identified', 'Monitoring', 'Update', 'Mitigated', 'Update', 'Scheduled')
+
+LOCK_FILE = '/var/lock/rssalertbot.lock'
 
 BOGUS_TIMEZONES = {
     'PST': '-0800',
@@ -147,7 +150,6 @@ class Feed:
         log.debug(f" url: {self.url}")
         log.debug(f" datafile: {self.datafile}")
 
-
     @property
     def previous_date(self):
         if not self._previous_date:
@@ -160,12 +162,10 @@ class Feed:
 
         return self._previous_date
 
-
     def save_date(self, new_date):
         """save the date, as UTC always"""
         with open(self.datafile, 'w') as f:
             f.write(str(new_date.astimezone(pytz.utc)))
-
 
     def entries(self):
         """Fetch and return a list of entries"""
@@ -184,7 +184,6 @@ class Feed:
         except Exception as e:
             log.error(f"Error fetching feed {self.feed}: {e}")
             return []
-
 
     def process(self):
         """Fetch and process this feed"""
@@ -221,13 +220,11 @@ class Feed:
 
         self.save_date(new_date)
 
-
     def alert(self, entry):
         self.alert_log(entry)
         self.alert_email(entry)
         self.alert_hipchat(entry)
         self.alert_slack(entry)
-
 
     def alert_email(self, entry):
         """Sends alert via email"""
@@ -242,7 +239,6 @@ class Feed:
                           Subject = f"{self.group} Alert: ({self.feed}) {entry.title}")
         message.Body = f"Feed: {self.feed}\nDate: {entry.published}\n\n{description}"
         smtp.send(message)
-
 
     def alert_hipchat(self, entry, color=None):
         """Sends alert to hipchat"""
@@ -285,7 +281,6 @@ class Feed:
                                  message_format='html', color=color, notify=True)
         except Exception as e:
             log.error(f"Error contacting Hipchat for feed {self.feed}: {e}")
-
 
     def alert_log(self, entry):
         """Sends alert to logfile"""
@@ -417,9 +412,13 @@ def readconfig(cfgfile):
 
 
 if __name__ == '__main__':
+
+
     argparser = argparse.ArgumentParser()
     argparser.add_argument('-c', '--config', type=str, default="config.json",
                            help="config file (default: ./config.json)")
+    argparser.add_argument('-l', '--lock', type=str, default=LOCK_FILE,
+                           help=f"lock file (default: {LOCK_FILE})")
 
     argparser.add_argument('--state_path', type=str,
                            help="state path (default: config file 'state_path')")
@@ -431,6 +430,13 @@ if __name__ == '__main__':
                            version=f'%(prog)s {__version__}')
 
     opts = argparser.parse_args(sys.argv[1:])
+
+    # handle lockfile
+    try:
+        lock = zc.lockfile.LockFile(opts.lock)
+    except zc.lockfile.LockError:
+        print("Another process is running - exiting")
+        sys.exit(1)
 
     if opts.v:
         if opts.v >= 3:

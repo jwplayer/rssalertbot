@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import os
 import re
@@ -34,7 +34,8 @@ setup(
         'pytz>=2013.9',
         'python-simple-hipchat==0.4.0',
         'slackclient',
-        'html2text'
+        'html2text',
+        'zc.lockfile'
     ],
     python_requires = ">=3.6",
     classifiers     = [
