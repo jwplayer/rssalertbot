@@ -364,11 +364,6 @@ class HTMLStripper(HTMLParser):
 
 
 def strip_html(html):
-    # first try to replace breaks with newlines
-    #html = html.replace('<br>', '\n')
-    #html = html.replace('<br/>', '\n')
-    #html = html.replace('&lt;br&gt;', '\n')
-
     s = HTMLStripper()
     s.feed(html)
     return s.get_data()
@@ -412,7 +407,6 @@ def readconfig(cfgfile):
 
 
 if __name__ == '__main__':
-
 
     argparser = argparse.ArgumentParser()
     argparser.add_argument('-c', '--config', type=str, default="config.json",
