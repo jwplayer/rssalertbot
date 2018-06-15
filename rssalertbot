@@ -18,6 +18,7 @@ import requests
 import sys
 import html2text
 import zc.lockfile
+import signal
 
 from dateutil       import parser as dateparser
 from html.parser    import HTMLParser
@@ -40,6 +41,8 @@ KEYS_YELLOW = ('Identified', 'Monitoring', 'Update', 'Mitigated', 'Update', 'Sch
 
 LOCK_FILE = '/var/lock/rssalertbot.lock'
 
+FEED_TIMEOUT = 10
+
 BOGUS_TIMEZONES = {
     'PST': '-0800',
     'PDT': '-0700',
@@ -54,6 +57,26 @@ BOGUS_TIMEZONES = {
 logging.basicConfig(level=logging.ERROR,
                     format='%(levelname)-7s [%(module)s.%(funcName)s:%(lineno)d] %(message)s')
 log = logging.getLogger()
+
+
+def timeout(func, args=(), kwargs={}, timeout_duration=FEED_TIMEOUT, default=None):
+    class TimeoutError(Exception):
+        pass
+
+    def handler(signum, frame):
+        raise TimeoutError()
+
+    # set the timeout handler
+    signal.signal(signal.SIGALRM, handler)
+    signal.alarm(timeout_duration)
+    try:
+        result = func(*args, **kwargs)
+    except TimeoutError as e:
+        result = default
+    finally:
+        signal.alarm(0)
+
+    return result
 
 
 class Feed:
@@ -73,6 +96,7 @@ class Feed:
 
     username = None
     password = None
+
 
     def __init__(self, cfg, group, feed, url):
         self.feed = feed
@@ -150,6 +174,7 @@ class Feed:
         log.debug(f" url: {self.url}")
         log.debug(f" datafile: {self.datafile}")
 
+
     @property
     def previous_date(self):
         if not self._previous_date:
@@ -162,10 +187,12 @@ class Feed:
 
         return self._previous_date
 
+
     def save_date(self, new_date):
         """save the date, as UTC always"""
         with open(self.datafile, 'w') as f:
             f.write(str(new_date.astimezone(pytz.utc)))
+
 
     def entries(self):
         """Fetch and return a list of entries"""
@@ -182,7 +209,7 @@ class Feed:
                 return []
             return data.entries
         except Exception as e:
-            log.error(f"Error fetching feed {self.feed}: {e}")
+            log.error(f"Error or timeout while fetching feed {self.feed}: {e}")
             return []
 
     def process(self):
@@ -226,6 +253,7 @@ class Feed:
         self.alert_hipchat(entry)
         self.alert_slack(entry)
 
+
     def alert_email(self, entry):
         """Sends alert via email"""
 
@@ -239,6 +267,7 @@ class Feed:
                           Subject = f"{self.group} Alert: ({self.feed}) {entry.title}")
         message.Body = f"Feed: {self.feed}\nDate: {entry.published}\n\n{description}"
         smtp.send(message)
+
 
     def alert_hipchat(self, entry, color=None):
         """Sends alert to hipchat"""
@@ -282,6 +311,7 @@ class Feed:
         except Exception as e:
             log.error(f"Error contacting Hipchat for feed {self.feed}: {e}")
 
+
     def alert_log(self, entry):
         """Sends alert to logfile"""
         if not self.enable_log:
@@ -289,6 +319,7 @@ class Feed:
 
         log.warning(f"({self.feed}) {entry.published}: {entry.title}")
         log.debug(f"{entry.description}")
+
 
     def alert_slack(self, entry, color=None):
         """Sends alert to slack"""
@@ -390,7 +421,8 @@ def main(cfg):
         for f in group['feeds']:
             log.info(f" Fetching feed '{f['name']}'")
             feed = Feed(cfg, group, f['name'], f['url'])
-            feed.process()
+
+            timeout(feed.process, timeout_duration=int(opts.feed_timeout))
 
 
 def readconfig(cfgfile):
@@ -413,7 +445,8 @@ if __name__ == '__main__':
                            help="config file (default: ./config.json)")
     argparser.add_argument('-l', '--lock', type=str, default=LOCK_FILE,
                            help=f"lock file (default: {LOCK_FILE})")
-
+    argparser.add_argument('-t', '--feed_timeout', type=str, default=FEED_TIMEOUT,
+                           help=f"feed processing timeout in seconds (default: {FEED_TIMEOUT})")
     argparser.add_argument('--state_path', type=str,
                            help="state path (default: config file 'state_path')")
     argparser.add_argument('--no-notify', action='store_true',
@@ -459,4 +492,3 @@ if __name__ == '__main__':
             sys.exit(-1)
 
     main(cfg)
-
