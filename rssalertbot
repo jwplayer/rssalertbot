@@ -17,6 +17,8 @@ import re
 import requests
 import sys
 import html2text
+import zc.lockfile
+import signal
 
 from dateutil       import parser as dateparser
 from html.parser    import HTMLParser
@@ -37,6 +39,10 @@ BOT_USERNAME = 'RSS Alert Bot'
 KEYS_GREEN  = ('Completed', 'Resolved', 'RESOLVED')
 KEYS_YELLOW = ('Identified', 'Monitoring', 'Update', 'Mitigated', 'Update', 'Scheduled')
 
+LOCK_FILE = '/var/lock/rssalertbot.lock'
+
+FEED_TIMEOUT = 10
+
 BOGUS_TIMEZONES = {
     'PST': '-0800',
     'PDT': '-0700',
@@ -51,6 +57,26 @@ BOGUS_TIMEZONES = {
 logging.basicConfig(level=logging.ERROR,
                     format='%(levelname)-7s [%(module)s.%(funcName)s:%(lineno)d] %(message)s')
 log = logging.getLogger()
+
+
+def timeout(func, args=(), kwargs={}, timeout_duration=FEED_TIMEOUT, default=None):
+    class TimeoutError(Exception):
+        pass
+
+    def handler(signum, frame):
+        raise TimeoutError()
+
+    # set the timeout handler
+    signal.signal(signal.SIGALRM, handler)
+    signal.alarm(timeout_duration)
+    try:
+        result = func(*args, **kwargs)
+    except TimeoutError as e:
+        result = default
+    finally:
+        signal.alarm(0)
+
+    return result
 
 
 class Feed:
@@ -182,7 +208,7 @@ class Feed:
                 return []
             return data.entries
         except Exception as e:
-            log.error(f"Error fetching feed {self.feed}: {e}")
+            log.error(f"Error or timeout while fetching feed {self.feed}: {e}")
             return []
 
 
@@ -369,11 +395,6 @@ class HTMLStripper(HTMLParser):
 
 
 def strip_html(html):
-    # first try to replace breaks with newlines
-    #html = html.replace('<br>', '\n')
-    #html = html.replace('<br/>', '\n')
-    #html = html.replace('&lt;br&gt;', '\n')
-
     s = HTMLStripper()
     s.feed(html)
     return s.get_data()
@@ -400,7 +421,7 @@ def main(cfg):
         for f in group['feeds']:
             log.info(f" Fetching feed '{f['name']}'")
             feed = Feed(cfg, group, f['name'], f['url'])
-            feed.process()
+            timeout(feed.process, timeout_duration=int(opts.feed_timeout))
 
 
 def readconfig(cfgfile):
@@ -420,7 +441,10 @@ if __name__ == '__main__':
     argparser = argparse.ArgumentParser()
     argparser.add_argument('-c', '--config', type=str, default="config.json",
                            help="config file (default: ./config.json)")
-
+    argparser.add_argument('-l', '--lock', type=str, default=LOCK_FILE,
+                           help=f"lock file (default: {LOCK_FILE})")
+    argparser.add_argument('-t', '--feed_timeout', type=str, default=FEED_TIMEOUT,
+                           help=f"feed processing timeout in seconds (default: {FEED_TIMEOUT})")
     argparser.add_argument('--state_path', type=str,
                            help="state path (default: config file 'state_path')")
     argparser.add_argument('--no-notify', action='store_true',
@@ -431,6 +455,13 @@ if __name__ == '__main__':
                            version=f'%(prog)s {__version__}')
 
     opts = argparser.parse_args(sys.argv[1:])
+
+    # handle lockfile
+    try:
+        lock = zc.lockfile.LockFile(opts.lock)
+    except zc.lockfile.LockError:
+        print("Another process is running - exiting")
+        sys.exit(1)
 
     if opts.v:
         if opts.v >= 3:
@@ -459,4 +490,3 @@ if __name__ == '__main__':
             sys.exit(-1)
 
     main(cfg)
-

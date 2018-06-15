@@ -2,6 +2,13 @@
 Changelog
 #########
 
+1.1.1 (kzapolski)
+-----------------
+
+* added slack support
+* added lock file support
+
+
 1.1.0 (alertedsnake)
 --------------------
 
