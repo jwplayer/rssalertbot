@@ -97,7 +97,6 @@ class Feed:
     username = None
     password = None
 
-
     def __init__(self, cfg, group, feed, url):
         self.feed = feed
         self.url  = url
@@ -212,6 +211,7 @@ class Feed:
             log.error(f"Error or timeout while fetching feed {self.feed}: {e}")
             return []
 
+
     def process(self):
         """Fetch and process this feed"""
 
@@ -246,6 +246,7 @@ class Feed:
             new_date = now
 
         self.save_date(new_date)
+
 
     def alert(self, entry):
         self.alert_log(entry)
@@ -319,7 +320,6 @@ class Feed:
 
         log.warning(f"({self.feed}) {entry.published}: {entry.title}")
         log.debug(f"{entry.description}")
-
 
     def alert_slack(self, entry, color=None):
         """Sends alert to slack"""
@@ -421,7 +421,6 @@ def main(cfg):
         for f in group['feeds']:
             log.info(f" Fetching feed '{f['name']}'")
             feed = Feed(cfg, group, f['name'], f['url'])
-
             timeout(feed.process, timeout_duration=int(opts.feed_timeout))
 
 
@@ -439,7 +438,6 @@ def readconfig(cfgfile):
 
 
 if __name__ == '__main__':
-
     argparser = argparse.ArgumentParser()
     argparser.add_argument('-c', '--config', type=str, default="config.json",
                            help="config file (default: ./config.json)")
