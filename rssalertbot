@@ -147,6 +147,8 @@ class Feed:
                     self.email_target = group['outputs']['email']['to']
                 if 'from' in group['outputs']['email']:
                     self.email_from = group['outputs']['email']['from']
+            else:
+                self.enable_email = False
 
             # configure hipchat output
             if self.enable_hipchat and 'hipchat' in group['outputs']:
@@ -156,6 +158,8 @@ class Feed:
                     self.hipchat_colors = group['outputs']['hipchat']['colors']
                 if 'match_body' in group['outputs']['hipchat']:
                     self.hipchat_match_body = group['outputs']['hipchat']['match_body']
+            else:
+                self.enable_hipchat = False
 
             # configure slack output
             if self.enable_slack and 'slack' in group['outputs']:
@@ -165,6 +169,8 @@ class Feed:
                     self.slack_colors = group['outputs']['slack']['colors']
                 if 'match_body' in group['outputs']['slack']:
                     self.slack_match_body = group['outputs']['slack']['match_body']
+            else:
+                self.enable_slack = False
 
         self._previous_date = None
 

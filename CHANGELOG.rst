@@ -6,6 +6,8 @@ Changelog
 -----------------
 
 * Add `X-Mailer` header
+* Fix notification defaults - wasn't setting them to False if not in the outputs
+  block for a feed
 
 1.1.1 (kzapolski)
 -----------------
