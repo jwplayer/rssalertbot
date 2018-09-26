@@ -267,6 +267,7 @@ class Feed:
         message = Message(charset="utf-8", From=self.email_from, To=self.email_target,
                           Subject = f"{self.group} Alert: ({self.feed}) {entry.title}")
         message.Body = f"Feed: {self.feed}\nDate: {entry.published}\n\n{description}"
+        message.header('X-Mailer', 'rssalertbot')
         smtp.send(message)
 
 
@@ -355,7 +356,7 @@ class Feed:
 
         attachments = [
             {
-                "title": self.feed+' '+entry.published+'\n'+entry.title,
+                "title": "{} {}\n{}".format(self.feed, entry.published, entry.title),
                 "text": desc,
                 "mrkdwn_in": [
                     "title",

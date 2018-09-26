@@ -2,6 +2,11 @@
 Changelog
 #########
 
+1.2.0 (kzapolski)
+-----------------
+
+* Add `X-Mailer` header
+
 1.1.1 (kzapolski)
 -----------------
 
