@@ -93,6 +93,7 @@ class Feed:
 
     slack_colors = {}
     slack_match_body = False
+    slack_force_color = None
 
     username = None
     password = None
@@ -167,6 +168,8 @@ class Feed:
                     self.slack_channel = group['outputs']['slack']['channel']
                 if 'colors' in group['outputs']['slack']:
                     self.slack_colors = group['outputs']['slack']['colors']
+                if 'force_color' in group['outputs']['slack']:
+                    self.slack_force_color = group['outputs']['slack']['force_color']
                 if 'match_body' in group['outputs']['slack']:
                     self.slack_match_body = group['outputs']['slack']['match_body']
             else:
@@ -338,8 +341,12 @@ class Feed:
         if self.slack_match_body:
             matchstring += entry.description
 
+        # use the provided color
+        if self.slack_force_color:
+            color = self.slack_force_color
+
         # guess color
-        if self.slack_colors:
+        elif self.slack_colors:
             matches = '(' + '|'.join(self.slack_colors.keys()) + ')'
             m = re.search(matches, matchstring)
             if m:

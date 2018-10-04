@@ -2,6 +2,12 @@
 Changelog
 #########
 
+1.3.0 (alertedsnake)
+--------------------
+
+* Added a `force-colors` argument for Slack, to force a color to always be used
+  for a given feed.
+
 1.2.0 (kzapolski)
 -----------------
 
