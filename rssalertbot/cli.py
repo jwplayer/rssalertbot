@@ -129,14 +129,14 @@ async def run(loop, opts, cfg):
             # create the async task
             tasks.append(feed.process(timeout = cfg.get('timeout'), dry_run = opts.dry_run))
 
-    locking.acquire_lock('rssalertbot-main')
+    lock = locking.acquire_lock('rssalertbot-main', 'rssalertbot')
 
     # now we wait for them to finish
     try:
         for task in tasks:
             await task
     finally:
-        locking.release_lock('rssalertbot-main')
+        lock.release()
 
 
 

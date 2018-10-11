@@ -1,12 +1,11 @@
 import logging
 import pendulum
-import time
 
 from pynamodb.attributes import (UnicodeAttribute, UTCDateTimeAttribute)
 from pynamodb.exceptions import DoesNotExist
 from pynamodb.models     import Model
 
-from . import BaseLocker, LockNotGrantedError
+from . import BaseLocker, Lock, LockAccessDenied
 
 log = logging.getLogger(__name__)
 
@@ -24,6 +23,9 @@ class DynamoLock(Model):
 
 
 class DynamoLocker(BaseLocker):
+    """
+    Use DynamoDB for locking.
+    """
 
     def __init__(self, table=None, url=None, region='us-east-1'):
 
@@ -36,25 +38,14 @@ class DynamoLocker(BaseLocker):
         DynamoLock.create_table()
 
 
-    def acquire_lock(self, key, owner_name: str='unknown', lease_time: int=3600) -> bool:
-        """
-        Acquire a lock.
-
-        Args:
-            key (str):        The key representing the log
-            owner_name (str): Owner associated with the lock.
-            lease_time (int): Length of lock, in seconds
-
-        Return:
-            bool: whether you got a lock or not
-        """
+    def acquire_lock(self, key, owner_name: str='unknown', lease_time: int=3600) -> Lock:
 
         try:
             old = DynamoLock.get(key)
             # If the lock is not yet expired, and you aren't the owner, you can't have it
             if (pendulum.now('UTC') < old.expires) and old.owner_name != owner_name:
                 log.debug(f"Lock {key} denied")
-                return False
+                raise LockAccessDenied()
 
             # delete the old lock
             old.delete()
@@ -63,40 +54,28 @@ class DynamoLocker(BaseLocker):
             pass
 
         # create the new lock
-        lock = DynamoLock(
+        rec = DynamoLock(
             key         = key,
             expires     = pendulum.now('UTC').add(seconds = lease_time),
             owner_name  = owner_name,
         )
-        lock.save()
-        log.debug(f"Lock {lock.key} acquired, expires {lock.expires}")
-        return True
+        rec.save()
+        log.debug(f"Lock {rec.key} acquired, expires {rec.expires}")
 
+        def release():
+            self.release_lock(key, owner_name)
 
-    def acquire_lock_wait(self, key, owner_name: str='unknown', lease_time: int=3600, wait: int=5, count: int=5) -> bool:
-
-        for _ in range(count):
-            res = self.acquire_lock(key, owner_name, lease_time)
-            if res:
-                return
-            time.sleep(wait)
-        return False
+        # return lock
+        return Lock(release, expires=rec.expires)
 
 
     def release_lock(self, key, owner_name='unknown'):
-        """
-        Release a lock.
-
-        Args:
-            key (str):        The key representing the log
-            owner_name (str): Owner associated with the lock.
-        """
 
         try:
             lock = DynamoLock.get(key)
             if lock.owner_name != owner_name:
                 log.debug(f"found lock: {lock.key} owned by {lock.owner_name}")
-                raise LockNotGrantedError()
+                raise LockAccessDenied()
             lock.delete()
             log.debug(f"Lock {key} released")
 
