@@ -34,6 +34,47 @@ def get_argparser():
     return argparser
 
 
+def setup_storage(config):
+
+    if 'file' in config:
+        log.info("Using local files for storage")
+        from .storage.file import FileStorage
+        return FileStorage(path = config.get('file.path'))
+
+    if 'dynamodb' in config:
+        log.info("Using DynamoDB for storage")
+        from .storage.dynamo import DynamoStorage
+        return DynamoStorage(
+            url    = config.get('dynamodb.url'),
+            table  = config.get('dynamodb.table'),
+            region = config.get('dynamodb.region', 'us-east-1'),
+        )
+
+    log.info("Defaulting to local files for storage")
+    from .storage.file import FileStorage
+    return FileStorage()
+
+
+def setup_locking(config):
+    if 'file' in config:
+        log.info("Using local files for locking")
+        from .locking.file import FileLocker
+        return FileLocker(path = config.get('file.path'))
+
+    if 'dynamodb' in config:
+        log.info("Using DynamoDB for locking")
+        from .locking.dynamo import DynamoLocker
+        return DynamoLocker(
+            url    = config.get('dynamodb.url'),
+            table  = config.get('dynamodb.table'),
+            region = config.get('dynamodb.region', 'us-east-1'),
+        )
+
+    log.info("Defaulting to local files for locking")
+    from .locking.file import FileLocker
+    return FileLocker()
+
+
 def main():
 
     argparser = get_argparser()
@@ -50,6 +91,11 @@ def main():
         elif opts.v == 1:
             log.setLevel(logging.WARNING)
 
+    # Some third-party libraries are very verbose with logging, but we don't need that.
+    logging.getLogger('asyncio').setLevel(logging.WARNING)
+    logging.getLogger('botocore').setLevel(logging.WARNING)
+    logging.getLogger('pynamodb').setLevel(logging.WARNING)
+
     # load the config
     cfg = Config()
     cfg.load(opts.config)
@@ -63,16 +109,36 @@ def main():
 
 
 async def run(loop, opts, cfg):
+
+    storage = setup_storage(cfg.get('storage', {}))
+    locking = setup_locking(cfg.get('locking', {}))
+
     tasks = []
     for group in cfg.get('feedgroups', []):
         for f in group['feeds']:
-            feed = Feed(loop, cfg, group, f['name'], f['url'], loglevel=log.getEffectiveLevel())
+            feed = Feed(
+                loop     = loop,
+                cfg      = cfg,
+                group    = group,
+                name     = f['name'],
+                url      = f['url'],
+                storage  = storage)
+
+            # log.debug(f'feed {feed.name} outputs: {feed.outputs}')
+
             # create the async task
             tasks.append(feed.process(timeout = cfg.get('timeout'), dry_run = opts.dry_run))
 
+    locking.acquire_lock('rssalertbot-main')
+
     # now we wait for them to finish
-    for task in tasks:
-        await task
+    try:
+        for task in tasks:
+            await task
+    finally:
+        locking.release_lock('rssalertbot-main')
+
+
 
 
 if __name__ == '__main__':
