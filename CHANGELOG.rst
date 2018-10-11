@@ -2,6 +2,14 @@
 Changelog
 #########
 
+2.0.0 (alertedsnake)
+--------------------
+
+Many breaking changes here!
+
+* Config file format is now YAML
+* Hipchat is no longer supported
+
 1.3.0 (alertedsnake)
 --------------------
 

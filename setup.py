@@ -25,18 +25,26 @@ setup(
     author          = 'Michael Stella',
     author_email    = 'michael@jwplayer.com',
     url             = 'https://github.com/JWPlayer/rssalertbot',
-    scripts         = ['rssalertbot'],
+    entry_points    = {
+        'console_scripts': ['rssalertbot=rssalertbot.cli:main']
+    },
     install_requires = [
-        'requests',
+        'aiohttp',
+        'dateparser',
         'feedparser==5.2.1',
         'mailer',
-        'python-dateutil',
-        'pytz>=2013.9',
-        'python-simple-hipchat==0.4.0',
+        'pendulum',
         'slackclient',
         'html2text',
+        'python-box>=3.1.1,<=3.999.999',
+        'PyYAML==3.12',
         'zc.lockfile'
     ],
+    extras_require = {
+        'dyanmo': [
+            'pynamodb',
+        ],
+    },
     python_requires = ">=3.6",
     classifiers     = [
         'Development Status :: 4 - Beta',
