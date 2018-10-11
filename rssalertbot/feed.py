@@ -9,7 +9,6 @@ import pendulum
 import re
 
 from mailer         import Mailer, Message
-from slackclient    import SlackClient
 
 import rssalertbot
 from .util import deepmerge, guess_color, strip_html
@@ -17,19 +16,6 @@ from .util import deepmerge, guess_color, strip_html
 
 class Feed:
     """Base class for feeds"""
-
-    group = "FeedBot"
-
-    enable_slack    = False
-    enable_email    = False
-    enable_log      = False
-
-    slack_colors = {}
-    slack_match_body = False
-    slack_force_color = None
-
-    username = None
-    password = None
 
     def __init__(self, loop, cfg, group, name, url, storage):
         self.log = logging.getLogger('.'.join((self.__class__.__module__,
@@ -52,26 +38,26 @@ class Feed:
             self.outputs['email']['from'] = f"{group['name']} Feeds <{self.outputs['email']['from']}>"
 
         # do the global notification disable
-#        if cfg.get('no_notify', False):
-#            self.log.debug("Note: notifications disabled")
-#            if 'email' in self.outputs:
-#                del(self.outputs['email'])
-#            if 'slack' in self.outputs:
-#                del(self.outputs['email'])
+        if cfg.get('no_notify', False):
+            self.log.debug("Note: notifications disabled")
+            if 'email' in self.outputs:
+                self.outputs['email']['disabled'] = True
+            if 'slack' in self.outputs:
+                self.outputs['slack']['disabled'] = True
 
         # configure fetch user/password
-        if 'username' in group:
-            self.username = group['username']
-        if 'password' in group:
-            self.password = group['password']
+        self.username = group.get('username')
+        self.password = group.get('password')
 
 
     @property
     def previous_date(self):
+        """Get the previous date from storage"""
         return self.storage.last_update(self.name)
 
 
     def save_date(self, new_date):
+        """Sets the 'last run' date in storage"""
         self.storage.save_date(self.name, new_date)
 
 
@@ -114,14 +100,10 @@ class Feed:
             return
 
 
-    async def process(self, timeout=60, dry_run=False):
+    async def process(self, timeout=60):
         """Fetch and process this feed"""
 
         self.log.info(f"[{self.name}] Begining processing, previous date {self.previous_date}")
-
-        if dry_run:
-            self.log.warn(f"[{self.name}] Simulation mode active")
-            return
 
         new_date = pendulum.datetime(1970, 1, 1, tz='UTC')
         now = pendulum.now('UTC')
@@ -132,8 +114,9 @@ class Feed:
                 # fix some bogus timezones
                 m = re.search(' ([PMCE][DS]T)$', entry.published)
                 if m:
-                    entry.published = entry.published.replace(m.group(1),
-                                                              rssalertbot.BOGUS_TIMEZONES[m.group(1)])
+                    entry.published = entry.published.replace(
+                        m.group(1),
+                        rssalertbot.BOGUS_TIMEZONES[m.group(1)])
 
                 date = pendulum.from_timestamp(dateparser.parse(entry.published).timestamp())
 
@@ -158,6 +141,7 @@ class Feed:
                     new_date = now
 
             self.save_date(new_date)
+
         self.log.info(f"[{self.name}] End processing, previous date {new_date}")
 
 
@@ -173,6 +157,7 @@ class Feed:
         if not self.outputs.get('email.enabled'):
             self.log.debug("Email not enabled")
             return
+
         cfg = self.outputs.get('email')
 
         description = strip_html(entry.description)
@@ -186,7 +171,7 @@ class Feed:
 
 
     def alert_log(self, entry):
-        """Sends alert to logfile if enabled"""
+        """Sends alert to logfile if enabled."""
 
         if not self.outputs.get('log.enabled'):
             self.log.debug("Logging not enabled")
@@ -198,6 +183,13 @@ class Feed:
 
     def alert_slack(self, entry, color=None):
         """Sends alert to slack if enabled"""
+
+        # load this here to nicely deal with pip extras
+        try:
+            from slackclient import SlackClient
+        except ImportError:
+            self.log.error("Python package 'slackclient' not installed!")
+            return
 
         if not self.outputs('slack.enabled'):
             self.log.debug("Slack not enabled")
@@ -227,7 +219,9 @@ class Feed:
         if not color:
             color = guess_color(matchstring)['slack_color']
 
-        # cleanup description to get it supported by slack - might figure out something more elegant later
+        # cleanup description to get it supported by slack - might figure out
+        # something more elegant later
+
         desc = html2text.html2text(entry.description)
         desc = desc.replace('**', '*')
         desc = desc.replace('\\', '')

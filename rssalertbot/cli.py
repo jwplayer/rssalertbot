@@ -24,8 +24,6 @@ def get_argparser():
     argparser.add_argument('--no-notify', action='store_true',
                            help="Disable all notifications globally")
 
-    argparser.add_argument('--dry-run', '--dry_run', action='store_true',
-                           help="Simulate, don't act")
     argparser.add_argument('-v', action='count',
                            help="Verbose - repeat for increased debugging")
     argparser.add_argument('--version',  action='version',
@@ -102,6 +100,8 @@ def main():
 
     if opts.feed_timeout:
         cfg.set('timeout', int(opts.feed_timeout if opts.feed_timeout else 0))
+    if opts.no_notify:
+        cfg.set('no_notify', False)
 
     loop = asyncio.get_event_loop()
     loop.run_until_complete(run(loop, opts, cfg))
@@ -127,7 +127,7 @@ async def run(loop, opts, cfg):
             # log.debug(f'feed {feed.name} outputs: {feed.outputs}')
 
             # create the async task
-            tasks.append(feed.process(timeout = cfg.get('timeout'), dry_run = opts.dry_run))
+            tasks.append(feed.process(timeout = cfg.get('timeout')))
 
     lock = locking.acquire_lock('rssalertbot-main', 'rssalertbot')
 
@@ -137,8 +137,6 @@ async def run(loop, opts, cfg):
             await task
     finally:
         lock.release()
-
-
 
 
 if __name__ == '__main__':

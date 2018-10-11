@@ -26,15 +26,17 @@ setup(
     author_email    = 'michael@jwplayer.com',
     url             = 'https://github.com/JWPlayer/rssalertbot',
     entry_points    = {
-        'console_scripts': ['rssalertbot=rssalertbot.cli:main']
+        'console_scripts': [
+            'rssalertbot=rssalertbot.cli:main',
+        ]
     },
+    python_requires = ">=3.6",
     install_requires = [
         'aiohttp',
         'dateparser',
         'feedparser==5.2.1',
         'mailer',
         'pendulum',
-        'slackclient',
         'html2text',
         'python-box>=3.1.1,<=3.999.999',
         'PyYAML==3.12',
@@ -44,8 +46,15 @@ setup(
         'dyanmo': [
             'pynamodb',
         ],
+        'slack': [
+            'slackclient',
+        ],
     },
-    python_requires = ">=3.6",
+    tests_require = [
+        "pytest",
+        "mock",
+        "moto",
+    ],
     classifiers     = [
         'Development Status :: 4 - Beta',
         'Programming Language :: Python',
