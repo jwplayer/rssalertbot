@@ -17,14 +17,14 @@ def alert_email(feed, cfg, entry):
         cfg (dict):              output config
         entry (dict):            the feed entry
     """
-
+    log.debug(f"Alerting email: {entry.title}")
 
     description = strip_html(entry.description)
 
     smtp = Mailer(host=cfg['server'])
     message = Message(charset="utf-8", From=cfg['from'], To=cfg['to'],
                       Subject = f"{feed.group} Alert: ({feed.name}) {entry.title}")
-    message.Body = f"Feed: {feed.name}\nDate: {entry.published}\n\n{description}"
+    message.Body = f"Feed: {feed.name}\nDate: {entry.datestring}\n\n{description}"
     message.header('X-Mailer', 'rssalertbot')
     smtp.send(message)
 
@@ -52,6 +52,7 @@ def alert_slack(feed, cfg, entry, color=None):
         cfg (dict):              output config
         entry (dict):            the feed entry
     """
+    log.debug(f"Alerting slack: {entry.title}")
 
     # load this here to nicely deal with pip extras
     try:
@@ -98,7 +99,7 @@ def alert_slack(feed, cfg, entry, color=None):
 
     attachments = [
         {
-            "title": f"{feed.name} {entry.published}\n{entry.title}",
+            "title": f"{feed.name} {entry.datestring}\n{entry.title}",
             "text": desc,
             "mrkdwn_in": [
                 "title",

@@ -17,8 +17,23 @@ except DistributionNotFound:
 
 BOT_USERNAME = 'RSS Alert Bot'
 
-KEYS_GREEN  = ('Completed', 'Resolved', 'RESOLVED')
-KEYS_YELLOW = ('Identified', 'Monitoring', 'Update', 'Mitigated', 'Update', 'Scheduled')
+KEYS_GREEN  = (
+    'complete', 'completed',
+    'recovered', 'recovery',
+    'resolved',
+    'scheduled',
+)
+KEYS_YELLOW = (
+    'identified',
+    'investigating',
+    'in progress',
+    'mitigated',
+    'monitoring',
+    'scheduled',
+    'testing',
+    'update',
+    'verifying',
+)
 
 LOCK_FILE = '/var/lock/rssalertbot.lock'
 
@@ -35,3 +50,5 @@ BOGUS_TIMEZONES = {
     'EDT': '-0400',
 }
 
+LOG_FORMAT = '%(levelname)-7s [%(module)s.%(funcName)s:%(lineno)d] %(message)s'
+LOG_FORMAT_FEED = '%(levelname)-7s [%(module)s.%(funcName)s:%(lineno)d] [%(feed)s] %(message)s'

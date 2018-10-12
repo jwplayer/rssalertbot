@@ -10,8 +10,7 @@ from .feed      import Feed
 from .locking   import LockError
 
 
-logging.basicConfig(level=logging.ERROR,
-                    format='%(levelname)-7s [%(module)s.%(funcName)s:%(lineno)d] %(message)s')
+logging.basicConfig(format=rssalertbot.LOG_FORMAT, level=logging.ERROR)
 log = logging.getLogger()
 
 
@@ -92,6 +91,7 @@ def main():
     logging.getLogger('asyncio').setLevel(logging.WARNING)
     logging.getLogger('botocore').setLevel(logging.WARNING)
     logging.getLogger('pynamodb').setLevel(logging.WARNING)
+    logging.getLogger('urllib3').setLevel(logging.WARNING)
 
     # load the config
     cfg = Config()
