@@ -40,7 +40,8 @@ def alert_log(feed, cfg, entry):
     """
 
     log.warning(f"[{feed.name}] {entry.published}: {entry.title}")
-    log.debug(f"[{feed.name}] {entry.description}")
+    if entry.description:
+        log.debug(f"[{feed.name}] {entry.description}")
 
 
 def alert_slack(feed, cfg, entry, color=None):
@@ -52,7 +53,6 @@ def alert_slack(feed, cfg, entry, color=None):
         cfg (dict):              output config
         entry (dict):            the feed entry
     """
-    log.debug(f"Alerting slack: {entry.title}")
 
     # load this here to nicely deal with pip extras
     try:
@@ -86,6 +86,8 @@ def alert_slack(feed, cfg, entry, color=None):
     # if color isn't set already, try some defaults
     if not color:
         color = guess_color(matchstring)['slack_color']
+
+    log.debug(f"[{feed.name}] Alerting slack: {entry.title} color {color}")
 
     # cleanup description to get it supported by slack - might figure out
     # something more elegant later

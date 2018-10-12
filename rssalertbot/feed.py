@@ -2,6 +2,7 @@ import aiohttp
 import async_timeout
 import base64
 import concurrent.futures
+import copy
 import dateparser
 import feedparser
 import logging
@@ -49,8 +50,9 @@ class Feed:
 
         self._setup_logging()
 
-        # start with the global outputs
-        self.outputs = Config(cfg.get('outputs', {}))
+        # start with the global outputs - note the copy so we don't mess
+        # with the main config dictionary
+        self.outputs = Config(copy.deepcopy(cfg.get('outputs', {})))
 
         # then merge the group outputs
         self.outputs.merge_dict(group.get('outputs', {}))
@@ -100,7 +102,8 @@ class Feed:
     @property
     def previous_date(self):
         """Get the previous date from storage"""
-        return self.storage.last_update(self.name)
+        key = f'{self.group.name}-{self.name}'
+        return self.storage.last_update(key)
 
 
     def save_date(self, new_date: pendulum.DateTime):
@@ -110,7 +113,8 @@ class Feed:
         Args:
             date: obviously, the date
         """
-        self.storage.save_date(self.name, new_date)
+        key = f'{self.group.name}-{self.name}'
+        self.storage.save_date(key, new_date)
 
 
     async def _fetch(self, session, timeout=10):
