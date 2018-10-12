@@ -7,6 +7,7 @@ import sys
 import rssalertbot
 from .config    import Config
 from .feed      import Feed
+from .locking   import LockError
 
 
 logging.basicConfig(level=logging.ERROR,
@@ -79,8 +80,6 @@ def main():
 
     opts = argparser.parse_args(sys.argv[1:])
 
-    # TODO: handle locking here - bail if there's already an instance running
-
     if opts.v:
         if opts.v >= 3:
             log.setLevel(logging.DEBUG)
@@ -111,7 +110,7 @@ def main():
 async def run(loop, opts, cfg):
 
     storage = setup_storage(cfg.get('storage', {}))
-    locking = setup_locking(cfg.get('locking', {}))
+    locker = setup_locking(cfg.get('locking', {}))
 
     tasks = []
     for group in cfg.get('feedgroups', []):
@@ -129,7 +128,11 @@ async def run(loop, opts, cfg):
             # create the async task
             tasks.append(feed.process(timeout = cfg.get('timeout')))
 
-    lock = locking.acquire_lock('rssalertbot-main', 'rssalertbot')
+    try:
+        lock = locker.acquire_lock('rssalertbot-main', 'rssalertbot')
+    except LockError:
+        log.warning("Lock not acquired, skipping this run.")
+        return
 
     # now we wait for them to finish
     try:
