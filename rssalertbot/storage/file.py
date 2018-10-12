@@ -1,8 +1,11 @@
 import datetime
+import logging
 import os
 import pendulum
 
 from . import BaseStorage
+
+log = logging.getLogger(__name__)
 
 
 class FileStorage(BaseStorage):
@@ -20,9 +23,10 @@ class FileStorage(BaseStorage):
         """
         datafile = os.path.join(self.basepath, f'last.{feed}.dat')
         try:
-            with open(datafile, 'rb') as f:
+            with open(datafile, 'r') as f:
                 return pendulum.parse(f.read().strip())
         except IOError as e:
+            log.debug(f"Error reading data file: {e}")
             return pendulum.yesterday('UTC')
 
 
@@ -31,7 +35,7 @@ class FileStorage(BaseStorage):
         Save the date for the current event.
         """
         # just in case someone didn't follow the type hints
-        if isinstance(datetime.datetime):
+        if isinstance(date, datetime.datetime):
             date = pendulum.from_timestamp(date.timestamp())
 
         datafile = os.path.join(self.basepath, f'last.{feed}.dat')

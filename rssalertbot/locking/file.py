@@ -3,7 +3,7 @@ import os
 import pendulum
 import zc.lockfile
 
-from . import BaseLocker, Lock, LockNotGranted
+from . import BaseLocker, Lock, LockNotAcquired
 
 log = logging.getLogger(__name__)
 
@@ -46,7 +46,7 @@ class FileLocker(BaseLocker):
 
             # no you can't have this lock
             log.debug(f"Lock '{key}' denied")
-            raise LockNotGranted()
+            raise LockNotAcquired()
 
 
     def release_lock(self, key, **kwargs):
