@@ -1,3 +1,6 @@
+"""
+Alerts
+"""
 import logging
 import re
 import html2text
@@ -85,7 +88,7 @@ def alert_slack(feed, cfg, entry, color=None):
 
     # if color isn't set already, try some defaults
     if not color:
-        color = guess_color(matchstring)['slack_color']
+        color = guess_color(matchstring)['slack']
 
     log.debug(f"[{feed.name}] Alerting slack: {entry.title} color {color}")
 

@@ -43,7 +43,7 @@ setup(
         'zc.lockfile'
     ],
     extras_require = {
-        'dyanmo': [
+        'dynamo': [
             'pynamodb',
         ],
         'slack': [

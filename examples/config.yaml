@@ -1,0 +1,56 @@
+storage:
+    file:
+        path: /tmp
+locking:
+    file:
+        path: /tmp
+
+loglevel: DEBUG
+outputs:
+    log:
+        enabled:  False
+    email:
+        enabled:  False
+        server:   localhost
+        from:     feedbot@example.com
+        to:       System Alerts <system-alerts@example.com>
+    slack:
+        enabled:  True
+        channel:  "#rsstest"
+        token:    "your-token-here"
+
+feedgroups:
+    - name: DataDog
+      feeds:
+        - name: DataDog
+          url:  http://status.datadoghq.com/history.rss
+
+    - name: Atlassian
+      outputs:
+        - slack:
+            match_body: True
+      feeds:
+        - name: Atlassian
+          url:  http://status.atlassian.com/history.rss
+
+    - name: AWS
+      feeds:
+        - name: s3
+          url:  http://status.aws.amazon.com/rss/s3-us-standard.rss
+        - name: ec2-us-east-1
+          url:  http://status.aws.amazon.com/rss/ec2-us-east-1.rss
+        - name: ec2-us-west-2
+          url:  http://status.aws.amazon.com/rss/ec2-us-west-2.rss
+        - name: rds-us-east-1
+          url:  http://status.aws.amazon.com/rss/rds-us-east-1.rss
+
+    - name: Salesforce
+      outputs:
+        - slack:
+            channel: "#sales"
+      feeds:
+        - name: Salesforce NA14
+          url:  http://status.salesforce.com/rest/rss/NA14"
+        - name: Salesforce NA8
+          url:  http://status.salesforce.com/rest/rss/NA8"
+

@@ -1,4 +1,6 @@
-
+"""
+Main CLI program.
+"""
 import argparse
 import asyncio
 import logging
@@ -79,14 +81,6 @@ def main():
 
     opts = argparser.parse_args(sys.argv[1:])
 
-    if opts.v:
-        if opts.v >= 3:
-            log.setLevel(logging.DEBUG)
-        elif opts.v == 2:
-            log.setLevel(logging.INFO)
-        elif opts.v == 1:
-            log.setLevel(logging.WARNING)
-
     # Some third-party libraries are very verbose with logging, but we don't need that.
     logging.getLogger('asyncio').setLevel(logging.WARNING)
     logging.getLogger('botocore').setLevel(logging.WARNING)
@@ -96,12 +90,25 @@ def main():
     # load the config
     cfg = Config()
     cfg.load(opts.config)
+    if cfg.get('loglevel'):
+        log.setLevel(logging.getLevelName(cfg.get('loglevel')))
 
+    # override log level if specified on command-line
+    if opts.v:
+        if opts.v >= 3:
+            log.setLevel(logging.DEBUG)
+        elif opts.v == 2:
+            log.setLevel(logging.INFO)
+        elif opts.v == 1:
+            log.setLevel(logging.WARNING)
+
+    # set some global options
     if opts.feed_timeout:
         cfg.set('timeout', int(opts.feed_timeout if opts.feed_timeout else 0))
     if opts.no_notify:
         cfg.set('no_notify', False)
 
+    # startup our event loop and run stuff
     loop = asyncio.get_event_loop()
     loop.run_until_complete(run(loop, opts, cfg))
     loop.close()

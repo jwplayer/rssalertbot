@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 """
 RSS feed monitoring robot.
-
 """
 
 from pkg_resources  import get_distribution, DistributionNotFound
@@ -9,6 +8,7 @@ from pkg_resources  import get_distribution, DistributionNotFound
 
 __author__    = 'Michael Stella <michael@jwplayer.com>'
 
+# get the version from the installed package
 try:
     __version__ = get_distribution('rssalertbot').version
 except DistributionNotFound:
@@ -34,8 +34,6 @@ KEYS_YELLOW = (
     'update',
     'verifying',
 )
-
-LOCK_FILE = '/var/lock/rssalertbot.lock'
 
 FEED_TIMEOUT = 10
 

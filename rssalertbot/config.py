@@ -1,3 +1,7 @@
+"""
+For handling the config file data.
+"""
+
 import json
 import os
 import yaml
@@ -75,7 +79,7 @@ class Config(Box):
         """Load a config file."""
 
         if not os.path.isfile(cfgfile):
-            raise ValueError("cfgfile is not a file!")
+            raise ValueError(f"Cannot read config file '{cfgfile}'")
 
         with open(cfgfile, 'r', encoding=encoding) as f:
             if cfgfile.endswith('.json'):

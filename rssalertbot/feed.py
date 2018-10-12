@@ -1,3 +1,7 @@
+"""
+Feed processing
+"""
+
 import aiohttp
 import async_timeout
 import base64
@@ -13,17 +17,6 @@ from box import Box
 import rssalertbot
 import rssalertbot.alerts as alerts
 from .config import Config
-
-
-class FeedLogFormatter(logging.Formatter):
-    def __init__(self, extras, *args, **kwargs):
-        self._extras = extras
-        super().__init__(*args, **kwargs)
-
-
-    def add_fields(self, log_record, record, message_dict):
-        log_record.update(self._extras)
-        super().add_fields(log_record, record, message_dict)
 
 
 class Feed:
