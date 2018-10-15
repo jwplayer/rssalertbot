@@ -29,7 +29,6 @@ KEYS_YELLOW = (
     'in progress',
     'mitigated',
     'monitoring',
-    'scheduled',
     'testing',
     'update',
     'verifying',
