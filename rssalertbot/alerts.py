@@ -26,7 +26,7 @@ def alert_email(feed, cfg, entry):
 
     smtp = Mailer(host=cfg['server'])
     message = Message(charset="utf-8", From=cfg['from'], To=cfg['to'],
-                      Subject = f"{feed.group} Alert: ({feed.name}) {entry.title}")
+                      Subject = f"{feed.group['name']} Alert: ({feed.name}) {entry.title}")
     message.Body = f"Feed: {feed.name}\nDate: {entry.datestring}\n\n{description}"
     message.header('X-Mailer', 'rssalertbot')
     smtp.send(message)
@@ -59,7 +59,7 @@ def alert_slack(feed, cfg, entry, color=None):
 
     # load this here to nicely deal with pip extras
     try:
-        from slackclient import SlackClient
+        import slackclient
     except ImportError:
         log.error("Python package 'slackclient' not installed!")
         return
@@ -115,7 +115,7 @@ def alert_slack(feed, cfg, entry, color=None):
     ]
 
     try:
-        sc = SlackClient(cfg.get('token'))
+        sc = slackclient.SlackClient(cfg.get('token'))
         sc.api_call(
             "chat.postMessage",
             channel=cfg.get('channel'),
