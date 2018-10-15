@@ -72,7 +72,7 @@ class Config(Box):
             self[key] = value
         else:
             # otherwise we do a crazy mergin' thing
-            self.merge(dict_from_dotted_key(key, value))
+            self.merge_dict(dict_from_dotted_key(key, value))
 
 
     def load(self, cfgfile, encoding='utf-8'):
