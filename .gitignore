@@ -20,3 +20,4 @@ lib/
 __pycache__/
 */__pycache__/
 .venv
+.pytest_cache

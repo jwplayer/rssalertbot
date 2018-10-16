@@ -18,7 +18,6 @@ class UtilTest(unittest.TestCase):
 </html>"""
 
         stripped = util.strip_html(message)
-        print(stripped)
         self.assertNotIn('<', stripped)
         self.assertIn('Hello world!', stripped)
 

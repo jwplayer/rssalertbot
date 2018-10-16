@@ -251,7 +251,7 @@ class Feed:
             rssalertbot.alerts.alert_log(self, self.outputs.get('log'), entry)
 
         if self.outputs.get('email.enabled'):
-            rssalertbot.alerts.lert_email(self, self.outputs.get('email'), entry)
+            rssalertbot.alerts.alert_email(self, self.outputs.get('email'), entry)
 
         if self.outputs.get('slack.enabled'):
             rssalertbot.alerts.alert_slack(self, self.outputs.get('slack'), entry)
