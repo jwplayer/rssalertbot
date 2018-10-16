@@ -15,7 +15,7 @@ import re
 from box import Box
 
 import rssalertbot
-import rssalertbot.alerts as alerts
+import rssalertbot.alerts
 from .config import Config
 
 
@@ -32,7 +32,7 @@ class Feed:
         storage:        Instantiated :py:class:`rssalertbot.storage.BaseStorage` subclass
     """
 
-    def __init__(self, loop, cfg, group, name, url, storage):
+    def __init__(self, loop, cfg, storage, group, name, url):
 
         self.group = group
         self.loop = loop
@@ -248,13 +248,13 @@ class Feed:
         """
 
         if self.outputs.get('log.enabled'):
-            alerts.alert_log(self, self.outputs.get('log'), entry)
+            rssalertbot.alerts.alert_log(self, self.outputs.get('log'), entry)
 
         if self.outputs.get('email.enabled'):
-            alerts.lert_email(self, self.outputs.get('email'), entry)
+            rssalertbot.alerts.lert_email(self, self.outputs.get('email'), entry)
 
         if self.outputs.get('slack.enabled'):
-            alerts.alert_slack(self, self.outputs.get('slack'), entry)
+            rssalertbot.alerts.alert_slack(self, self.outputs.get('slack'), entry)
 
 
     def format_timestamp_local(self, timestamp):

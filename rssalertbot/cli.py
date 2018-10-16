@@ -125,10 +125,10 @@ async def run(loop, opts, cfg):
             feed = Feed(
                 loop     = loop,
                 cfg      = cfg,
+                storage  = storage,
                 group    = group,
                 name     = f['name'],
-                url      = f['url'],
-                storage  = storage)
+                url      = f['url'])
 
             # log.debug(f'feed {feed.name} outputs: {feed.outputs}')
 
