@@ -28,6 +28,7 @@ New features:
 * Added a flag for feed groups to alert if fetching a feed fails
 * Created a ``Dockerfile`` so you can containerize the thing, and a
   ``docker-compose.yaml`` for example purposes.  It makes some assumptions.
+* Created a ``Makefile`` so we can publish this container for real.
 
 Enhancements:
 ^^^^^^^^^^^^^
