@@ -7,7 +7,7 @@ ENV PYTHON_EGG_CACHE=/tmp \
     PIP_NO_CACHE_DIR=0 \
     PIP_EXTRA_INDEX_URL=$PIP_EXTRA_INDEX_URL
 
-ENTRYPOINT ["tini", "--"]
+ENTRYPOINT ["tini", "--", "rssalertbot"]
 
 RUN addgroup bot && adduser -D -G bot bot && mkdir /home/bot/.aws
 
@@ -29,4 +29,4 @@ RUN pip3 install '.[dynamo,slack]'
 
 # don't run as root
 USER bot
-CMD ["rssalertbot", "-c", "config.yaml"]
+CMD ["-c", "config.yaml"]
