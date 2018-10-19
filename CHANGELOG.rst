@@ -2,6 +2,14 @@
 Changelog
 #########
 
+2.1.0 (alertedsnake)
+--------------------
+
+* Added config option ``load_dir()`` to merge a ``conf.d`` style directory
+  of config files.  We use these at JWPlayer_.
+* ``Config.load()`` now will call either ``load_dir()`` or ``load_file()`` as
+  appropriate.
+
 2.0.0 (alertedsnake)
 --------------------
 
@@ -75,3 +83,5 @@ Enhancements:
 * Added command-line argument --version
 * Logfile format updated
 * Cleanup requirements
+
+.. _JWPlayer: https://jwplayer.com/

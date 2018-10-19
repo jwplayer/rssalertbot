@@ -76,6 +76,17 @@ class Config(Box):
 
 
     def load(self, cfgfile, encoding='utf-8'):
+        """
+        Load configuration from file or 'conf.d' directory.
+        """
+
+        if os.path.isdir(cfgfile):
+            self.load_dir(cfgfile, encoding)
+        else:
+            self.load_file(cfgfile, encoding)
+
+
+    def load_file(self, cfgfile, encoding='utf-8'):
         """Load a config file."""
 
         if not os.path.isfile(cfgfile):
@@ -90,6 +101,29 @@ class Config(Box):
                 raise ValueError("unknown file format")
 
             self.merge_dict(data_dict)
+
+
+    def load_dir(self, cfgdir, encoding='utf-8'):
+        """
+        Load all files in a directory, 'conf.d' style, merging them in in
+        alphanumeric order.
+
+        Only allows '.yaml' files, ignores dot files.
+
+        Args:
+            cfgdir (str):   directory path
+            encoding (str): File encoding option for open()
+        """
+
+        for f in sorted(os.listdir(cfgdir)):
+            # skip dot files
+            if f.startswith('.'):
+                continue
+
+            if not f.endswith('.yaml'):
+                continue
+
+            self.load_file(os.path.join(cfgdir, f), encoding=encoding)
 
 
     def merge_dict(self, data):
