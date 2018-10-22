@@ -9,6 +9,8 @@ Changelog
   of config files.  We use these at JWPlayer_.
 * ``Config.load()`` now will call either ``load_dir()`` or ``load_file()`` as
   appropriate.
+* ``--config`` argument now accepts multiple files
+* Bugfix: user should be able to write to its homedir
 
 2.0.0 (alertedsnake)
 --------------------

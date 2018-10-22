@@ -9,7 +9,10 @@ ENV PYTHON_EGG_CACHE=/tmp \
 
 ENTRYPOINT ["tini", "--", "rssalertbot"]
 
-RUN addgroup bot && adduser -D -G bot bot && mkdir /home/bot/.aws
+RUN addgroup bot \
+    && adduser -D -G bot bot \
+    && mkdir /home/bot/.aws \
+    && chown -R bot:bot /home/bot
 
 RUN apk add --no-cache \
         ca-certificates \

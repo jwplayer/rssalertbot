@@ -20,7 +20,7 @@ ifndef VIRTUAL_ENV
 endif
 
 $(PYTEST): | venv_test
-	@pip install pytest
+	@pip install mock pytest
 
 test: $(PYTEST)
 	pip install '.[dynamo,slack]'

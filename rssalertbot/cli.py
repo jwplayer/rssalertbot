@@ -4,7 +4,6 @@ Main CLI program.
 import argparse
 import asyncio
 import logging
-import sys
 
 import rssalertbot
 from .config    import Config
@@ -19,7 +18,7 @@ log = logging.getLogger()
 def get_argparser():
 
     argparser = argparse.ArgumentParser()
-    argparser.add_argument('-c', '--config', type=str, default="config.json",
+    argparser.add_argument('-c', '--config', action='append', default=["config.yaml"],
                            help="config file (default: ./config.json)")
     argparser.add_argument('-t', '--feed_timeout', type=str, default=rssalertbot.FEED_TIMEOUT,
                            help=f"feed processing timeout in seconds (default: {rssalertbot.FEED_TIMEOUT})")
@@ -78,8 +77,7 @@ def setup_locking(config):
 def main():
 
     argparser = get_argparser()
-
-    opts = argparser.parse_args(sys.argv[1:])
+    opts = argparser.parse_args()
 
     # Some third-party libraries are very verbose with logging, but we don't need that.
     logging.getLogger('asyncio').setLevel(logging.WARNING)
@@ -89,7 +87,8 @@ def main():
 
     # load the config
     cfg = Config()
-    cfg.load(opts.config)
+    for cfgfile in opts.config:
+        cfg.load(cfgfile)
     if cfg.get('loglevel'):
         log.setLevel(logging.getLevelName(cfg.get('loglevel')))
 
