@@ -7,11 +7,10 @@ import async_timeout
 import base64
 import concurrent.futures
 import copy
-import dateparser
+import dateutil.parser
 import feedparser
 import logging
 import pendulum
-import re
 from box import Box
 
 import rssalertbot
@@ -206,15 +205,7 @@ class Feed:
 
         for entry in await self.fetch_and_parse(timeout):
 
-            # fix some bogus timezones
-            m = re.search(' ([PMCE][DS]T)$', entry.published)
-            if m:
-                entry.published = entry.published.replace(
-                    m.group(1),
-                    rssalertbot.BOGUS_TIMEZONES[m.group(1)])
-
-            # parse the date into a date object
-            entry.published = pendulum.from_timestamp(dateparser.parse(entry.published).timestamp())
+            entry.published = pendulum.from_timestamp(dateutil.parser.parse(entry.published).timestamp())
             # also save a prettified string format
             entry.datestring = self.format_timestamp_local(entry.published)
 

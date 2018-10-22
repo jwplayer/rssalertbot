@@ -2,6 +2,14 @@
 Changelog
 #########
 
+2.1.1 (alertedsnake)
+--------------------
+
+* Dateparser breaks with weird TZ offsets, like `-0000` - I submitted a bug:
+  https://github.com/scrapinghub/dateparser/issues/458 .
+  In the meantime, why did I use that instead of `dateutil.parser` anyway?
+  Updated.
+
 2.1.0 (alertedsnake)
 --------------------
 
