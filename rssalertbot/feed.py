@@ -205,7 +205,8 @@ class Feed:
 
         for entry in await self.fetch_and_parse(timeout):
 
-            entry.published = pendulum.from_timestamp(dateutil.parser.parse(entry.published).timestamp())
+            pubdate = dateutil.parser.parse(entry.published, tzinfos=rssalertbot.BOGUS_TIMEZONES)
+            entry.published = pendulum.from_timestamp(pubdate.timestamp())
             # also save a prettified string format
             entry.datestring = self.format_timestamp_local(entry.published)
 

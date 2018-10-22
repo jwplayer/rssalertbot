@@ -36,5 +36,16 @@ KEYS_YELLOW = (
 
 FEED_TIMEOUT = 10
 
+BOGUS_TIMEZONES = {
+    'PST': -800,
+    'PDT': -700,
+    'MST': -700,
+    'MDT': -600,
+    'CST': -600,
+    'CDT': -500,
+    'EST': -500,
+    'EDT': -400,
+}
+
 LOG_FORMAT = '%(levelname)-7s [%(module)s.%(funcName)s:%(lineno)d] %(message)s'
 LOG_FORMAT_FEED = '%(levelname)-7s [%(module)s.%(funcName)s:%(lineno)d] [%(feed)s] %(message)s'

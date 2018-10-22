@@ -2,6 +2,11 @@
 Changelog
 #########
 
+2.1.2 (alertedsnake)
+--------------------
+
+* Okay, passing in one more option to clean up some bogus timezone warnings.
+
 2.1.1 (alertedsnake)
 --------------------
 
