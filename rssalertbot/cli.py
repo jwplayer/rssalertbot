@@ -127,7 +127,8 @@ async def run(loop, opts, cfg):
                 storage  = storage,
                 group    = group,
                 name     = f['name'],
-                url      = f['url'])
+                url      = f['url'],
+                loglevel = log.getEffectiveLevel())
 
             # log.debug(f'feed {feed.name} outputs: {feed.outputs}')
 

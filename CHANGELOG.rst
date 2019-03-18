@@ -2,10 +2,11 @@
 Changelog
 #########
 
-2.2.0 (alertedsnake)
+2.2.2 (alertedsnake)
 --------------------
 
 * Allow output to multiple slack channels
+* Pass log level into feed processor
 
 2.1.2 (alertedsnake)
 --------------------

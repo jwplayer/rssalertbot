@@ -31,7 +31,7 @@ class Feed:
         storage:        Instantiated :py:class:`rssalertbot.storage.BaseStorage` subclass
     """
 
-    def __init__(self, loop, cfg, storage, group, name, url):
+    def __init__(self, loop, cfg, storage, group, name, url, loglevel=logging.INFO):
 
         self.group = group
         self.loop = loop
@@ -40,7 +40,7 @@ class Feed:
         self.url  = url
         self.storage = storage
 
-        self._setup_logging()
+        self._setup_logging(loglevel)
 
         # start with the global outputs - note the copy so we don't mess
         # with the main config dictionary
@@ -66,7 +66,7 @@ class Feed:
         self.password = group.get('password')
 
 
-    def _setup_logging(self):
+    def _setup_logging(self, loglevel=logging.INFO):
         """
         Setup a logger for this class, which will automatically add
         some useful extras.
@@ -89,6 +89,8 @@ class Feed:
                 "feed": self.name,
                 "group": self.group.name,
             })
+
+        self.log.setLevel(loglevel)
 
 
     @property
