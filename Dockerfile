@@ -1,4 +1,4 @@
-FROM alpine:3.6
+FROM alpine:3.8
 MAINTAINER Michael Stella <michael@jwplayer.com>
 
 ARG PIP_EXTRA_INDEX_URL

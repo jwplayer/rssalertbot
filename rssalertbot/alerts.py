@@ -116,14 +116,18 @@ def alert_slack(feed, cfg, entry, color=None):
 
     try:
         sc = slackclient.SlackClient(cfg.get('token'))
-        sc.api_call(
-            "chat.postMessage",
-            channel=cfg.get('channel'),
-            attachments=attachments,
-            icon_emoji=':information_source:',
-            as_user=False,
-            username=rssalertbot.BOT_USERNAME
-        )
+        channels = cfg.get('channel')
+        if not isinstance(channels, list):
+            channels = [channels]
+        for channel in channels:
+            sc.api_call(
+                "chat.postMessage",
+                channel=channel,
+                attachments=attachments,
+                icon_emoji=':information_source:',
+                as_user=False,
+                username=rssalertbot.BOT_USERNAME
+            )
 
     except Exception as e:
         log.exception(f"Error contacting Slack for feed {feed.name}")

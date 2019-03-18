@@ -25,7 +25,7 @@ install_requires = [
     'pendulum',
     'html2text',
     'python-box>=3.1.1,<=3.999.999',
-    'PyYAML==3.12',
+    'PyYAML',
     'zc.lockfile'
 ]
 tests_require = install_requires + [

@@ -2,6 +2,11 @@
 Changelog
 #########
 
+2.2.0 (alertedsnake)
+--------------------
+
+* Allow output to multiple slack channels
+
 2.1.2 (alertedsnake)
 --------------------
 
