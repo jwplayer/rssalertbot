@@ -23,7 +23,7 @@ $(PYTEST): | venv_test
 	@pip install mock pytest
 
 test: $(PYTEST)
-	pip install '.[dynamo,slack]'
+	pip install -e '.[dynamo,slack]'
 	$(PYTEST) -v
 
 clean:

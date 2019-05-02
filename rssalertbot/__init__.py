@@ -47,5 +47,4 @@ BOGUS_TIMEZONES = {
     'EDT': -400,
 }
 
-LOG_FORMAT = '%(levelname)-7s [%(module)s.%(funcName)s:%(lineno)d] %(message)s'
-LOG_FORMAT_FEED = '%(levelname)-7s [%(module)s.%(funcName)s:%(lineno)d] [%(feed)s] %(message)s'
+LOG_FORMAT = '%(asctime)s %(levelname)-7s [%(module)s.%(funcName)s:%(lineno)d] %(message)s'

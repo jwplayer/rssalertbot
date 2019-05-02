@@ -20,16 +20,26 @@ def alert_email(feed, cfg, entry):
         cfg (dict):              output config
         entry (dict):            the feed entry
     """
-    log.debug(f"Alerting email: {entry.title}")
+    logger = logging.LoggerAdapter(log, extra = {
+        'feed':  feed.name,
+        'group': feed.group['name'],
+    })
+    logger.setLevel(logging.DEBUG)
+
+    logger.debug(f"[{feed.name}] Alerting email: {entry.title}")
 
     description = strip_html(entry.description)
 
-    smtp = Mailer(host=cfg['server'])
-    message = Message(charset="utf-8", From=cfg['from'], To=cfg['to'],
-                      Subject = f"{feed.group['name']} Alert: ({feed.name}) {entry.title}")
-    message.Body = f"Feed: {feed.name}\nDate: {entry.datestring}\n\n{description}"
-    message.header('X-Mailer', 'rssalertbot')
-    smtp.send(message)
+    try:
+        smtp = Mailer(host=cfg['server'])
+        message = Message(charset="utf-8", From=cfg['from'], To=cfg['to'],
+                          Subject = f"{feed.group['name']} Alert: ({feed.name}) {entry.title}")
+        message.Body = f"Feed: {feed.name}\nDate: {entry.datestring}\n\n{description}"
+        message.header('X-Mailer', 'rssalertbot')
+        smtp.send(message)
+
+    except Exception:
+        logger.exception(f"[{feed.name}] Error sending mail")
 
 
 def alert_log(feed, cfg, entry):
@@ -41,10 +51,15 @@ def alert_log(feed, cfg, entry):
         cfg (dict):              output config
         entry (dict):            the feed entry
     """
+    logger = logging.LoggerAdapter(log, extra = {
+        'feed':  feed.name,
+        'group': feed.group['name'],
+    })
+    logger.setLevel(logging.DEBUG)
 
-    log.warning(f"[{feed.name}] {entry.published}: {entry.title}")
+    logger.warning(f"[{feed.name}] {entry.published}: {entry.title}")
     if entry.description:
-        log.debug(f"[{feed.name}] {entry.description}")
+        logger.debug(f"[{feed.name}] {entry.description}")
 
 
 def alert_slack(feed, cfg, entry, color=None):
@@ -56,12 +71,18 @@ def alert_slack(feed, cfg, entry, color=None):
         cfg (dict):              output config
         entry (dict):            the feed entry
     """
+    logger = logging.LoggerAdapter(log, extra = {
+        'feed':  feed.name,
+        'group': feed.group['name'],
+    })
+    logger.setLevel(logging.DEBUG)
+    logger.debug(f"[{feed.name}] Alerting slack: {entry.title}")
 
     # load this here to nicely deal with pip extras
     try:
-        import slackclient
+        import slack
     except ImportError:
-        log.error("Python package 'slackclient' not installed!")
+        logger.error("Python package 'slackclient' not installed!")
         return
 
     # attempt to match keywords in the title
@@ -90,7 +111,8 @@ def alert_slack(feed, cfg, entry, color=None):
     if not color:
         color = guess_color(matchstring)['slack']
 
-    log.debug(f"[{feed.name}] Alerting slack: {entry.title} color {color}")
+    # NOTE - this isn't actually used as color here, since it's slack
+    # and now it doesn't do color, but it does do emojis, so...
 
     # cleanup description to get it supported by slack - might figure out
     # something more elegant later
@@ -102,32 +124,50 @@ def alert_slack(feed, cfg, entry, color=None):
     desc = desc.replace('>', '&gt;')
     desc = desc.replace('&', '&amp;')
 
-    attachments = [
+    blocks = [
         {
-            "title": f"{feed.name} {entry.datestring}\n{entry.title}",
-            "text": desc,
-            "mrkdwn_in": [
-                "title",
-                "text"
-            ],
-            "color": color
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": f":{color}: *{feed.name}: {entry.title}*",
+            }
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": desc,
+            }
+        },
+        {
+            "type": "section",
+            "fields": [
+                {
+                    "type": "mrkdwn",
+                    "text": "*Date:*\n{entry.datestring}"
+                }
+            ]
         }
     ]
 
     try:
-        sc = slackclient.SlackClient(cfg.get('token'))
+        sc = slack.WebClient(cfg.get('token'))
         channels = cfg.get('channel')
         if not isinstance(channels, list):
             channels = [channels]
         for channel in channels:
-            sc.api_call(
-                "chat.postMessage",
-                channel=channel,
-                attachments=attachments,
-                icon_emoji=':information_source:',
-                as_user=False,
-                username=rssalertbot.BOT_USERNAME
+            response = sc.chat_postMessage(
+                user        = rssalertbot.BOT_USERNAME,
+                channel     = channel,
+                mrkdwn      = True,
+                as_user     = True,
+                text        = f"*{feed.name}: {entry.title}*",
+                blocks      = blocks,
             )
+            if response.get('ok'):
+                logger.debug("Sent message to slack channel {channel}")
+            else:
+                logger.warning(f"Slack error: {response['response_metadata']}")
 
-    except Exception as e:
-        log.exception(f"Error contacting Slack for feed {feed.name}")
+    except Exception:
+        logger.exception(f"[{feed.name}] Error contacting Slack")

@@ -55,6 +55,7 @@ class DynamoStorage(BaseStorage):
 #            },
 #        )
 
+
     def last_update(self, feed) -> pendulum.DateTime:
         """
         Get the last updated date for the given feed

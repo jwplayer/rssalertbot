@@ -17,6 +17,8 @@ import rssalertbot
 import rssalertbot.alerts
 from .config import Config
 
+log = logging.getLogger(__name__)
+
 
 class Feed:
     """
@@ -31,7 +33,7 @@ class Feed:
         storage:        Instantiated :py:class:`rssalertbot.storage.BaseStorage` subclass
     """
 
-    def __init__(self, loop, cfg, storage, group, name, url, loglevel=logging.INFO):
+    def __init__(self, loop, cfg, storage, group, name, url):
 
         self.group = group
         self.loop = loop
@@ -40,7 +42,14 @@ class Feed:
         self.url  = url
         self.storage = storage
 
-        self._setup_logging(loglevel)
+        self.log = logging.LoggerAdapter(
+            log,
+            extra = {
+                "feed": self.name,
+                "group": self.group.name,
+            })
+
+        self.log.debug(f"Setting up feed {self.name}")
 
         # start with the global outputs - note the copy so we don't mess
         # with the main config dictionary
@@ -65,32 +74,18 @@ class Feed:
         self.username = group.get('username')
         self.password = group.get('password')
 
+        # sanity tests
+        if self.outputs.get('slack.enabled'):
+            for field in ('slack.channel', 'slack.token'):
+                if not self.outputs.get(field):
+                    self.log.error(f"Slack enabled but {field} not set!")
+                    self.outputs.set('slack.enabled', False)
 
-    def _setup_logging(self, loglevel=logging.INFO):
-        """
-        Setup a logger for this class, which will automatically add
-        some useful extras.
-        """
-
-        logger = logging.getLogger('.'.join((self.__class__.__module__,
-                                   self.__class__.__name__)))
-
-        # setup logging
-        formatter = logging.Formatter(rssalertbot.LOG_FORMAT_FEED)
-        handler = logging.StreamHandler()
-        handler.setFormatter(formatter)
-        logger.handlers = []      # bad hack!
-        logger.propagate = False  # this too!
-        logger.addHandler(handler)
-
-        self.log = logging.LoggerAdapter(
-            logger,
-            extra = {
-                "feed": self.name,
-                "group": self.group.name,
-            })
-
-        self.log.setLevel(loglevel)
+        if self.outputs.get('email.enabled'):
+            for field in ('email.to', 'email.from'):
+                if not self.outputs.get(field):
+                    self.log.error(f"Email enabled but {field} not set!")
+                    self.outputs.set('email.enabled', False)
 
 
     @property
@@ -200,7 +195,7 @@ class Feed:
             timeout (int): HTTP timeout
         """
 
-        self.log.info(f"Begining processing, previous date {self.previous_date}")
+        self.log.info(f"Begining processing feed {self.name}, previous date {self.previous_date}")
 
         new_date = pendulum.datetime(1970, 1, 1, tz='UTC')
         now = pendulum.now('UTC')
@@ -233,7 +228,7 @@ class Feed:
                 new_date = now
 
         self.save_date(new_date)
-        self.log.info(f"End processing, previous date {new_date}")
+        self.log.info(f"End processing feed {self.name}, previous date {new_date}")
 
 
     def alert(self, entry):

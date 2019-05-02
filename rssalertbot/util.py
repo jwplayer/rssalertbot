@@ -52,12 +52,12 @@ def guess_color(message):
     teststring = message.lower()
 
     if any(key in teststring for key in rssalertbot.KEYS_GREEN):
-            return {"slack": "good"}
+            return {"slack": "heavy_check_mark"}
 
     if any(key in teststring for key in rssalertbot.KEYS_YELLOW):
             return {"slack": "warning"}
 
-    return {"slack": "danger"}
+    return {"slack": "fire"}
 
 
 def deepmerge(a, b):

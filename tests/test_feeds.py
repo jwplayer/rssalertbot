@@ -1,6 +1,8 @@
 
+import copy
 import mock
 import pendulum
+import testfixtures
 import unittest
 from box import Box
 
@@ -81,7 +83,9 @@ class TestFeeds(unittest.TestCase):
                     'enabled': True,
                 },
                 'slack': {
-                    'enabled': True,
+                    'enabled':  True,
+                    'token':    'monkeys',
+                    'channel':  '#foo',
                 },
             },
         })
@@ -100,6 +104,34 @@ class TestFeeds(unittest.TestCase):
         rssalertbot.alerts.alert_email.assert_called()
         rssalertbot.alerts.alert_log.assert_called()
         rssalertbot.alerts.alert_slack.assert_called()
+
+
+    def test_alert_slack_missing_values(self):
+
+        config = Config({
+            'outputs': {
+                'slack': {
+                    'enabled': True,
+                }
+            }
+        })
+
+        mygroup = copy.deepcopy(group)
+        with testfixtures.LogCapture() as capture:
+            Feed(
+                loop     = mock.MagicMock(),
+                cfg      = config,
+                storage  = MockStorage(),
+                group    = mygroup,
+                name     = testdata['name'],
+                url      = testdata['url'],
+            )
+
+            capture.check_present(
+                ('rssalertbot.feed', 'ERROR', 'Slack enabled but slack.channel not set!'),
+                ('rssalertbot.feed', 'ERROR', 'Slack enabled but slack.token not set!'),
+                order_matters=False,
+            )
 
 
     def test_alerts_disabled(self):

@@ -2,6 +2,16 @@
 Changelog
 #########
 
+2.3.0-rc1 (alertedsnake)
+------------------------
+
+* Additional/better logging
+* Removed anything which messes with the log format or root logger,
+  you should do this yourself.
+* Reworked the ``cli.py`` file so it only does the cli stuff and nothing else
+* Update slackclient to 2.0.0
+* Add config sanity checks
+
 2.2.2 (alertedsnake)
 --------------------
 
