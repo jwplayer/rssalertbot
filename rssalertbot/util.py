@@ -37,27 +37,26 @@ def strip_html(html):
     return s.get_data()
 
 
-def guess_color(message):
+def guess_level(message) -> str:
     """
-    Try to guess the color of the message.
+    Try to guess the alert level of the message.
 
     Args:
         message (str): the message to search
 
     Returns:
-        dict: a dictionary where the key is the output type (i.e. 'slack')
-              and the value is the string which represents the color.
+        str: one of 'good', 'warning', 'alert'
 
     """
     teststring = message.lower()
 
     if any(key in teststring for key in rssalertbot.KEYS_GREEN):
-            return {"slack": "heavy_check_mark"}
+        return "good"
 
     if any(key in teststring for key in rssalertbot.KEYS_YELLOW):
-            return {"slack": "warning"}
+        return "warning"
 
-    return {"slack": "fire"}
+    return "alert"
 
 
 def deepmerge(a, b):

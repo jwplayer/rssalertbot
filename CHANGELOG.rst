@@ -2,15 +2,18 @@
 Changelog
 #########
 
-2.3.0-rc1 (alertedsnake)
+2.3.0-rc7 (alertedsnake)
 ------------------------
 
 * Additional/better logging
 * Removed anything which messes with the log format or root logger,
   you should do this yourself.
 * Reworked the ``cli.py`` file so it only does the cli stuff and nothing else
-* Update slackclient to 2.0.0
+* Update slackclient to 2.0.0, do many more things async as a result
 * Add config sanity checks
+* ``color`` in configs is now ``level``, so you can set the mapping from message
+  to warning level, not the color directly in configuration.  This was done to be
+  accurate at setting a color *and* an icon with Slack.
 
 2.2.2 (alertedsnake)
 --------------------

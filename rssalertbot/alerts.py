@@ -2,14 +2,27 @@
 Alerts
 """
 import logging
+import functools
 import re
 import html2text
+import pendulum
 from mailer import Mailer, Message
 
 import rssalertbot
-from .util import guess_color, strip_html
+from .util import guess_level, strip_html
 
 log = logging.getLogger(__name__)
+
+SLACK_COLORS = {
+    'warning':  '#ffc300',
+    'good':     '#00cc00',
+    'alert':    '#cc0000',
+}
+SLACK_ICONS = {
+    'warning':  'warning',
+    'good':     'heavy_check_mark',
+    'alert':    'fire',
+}
 
 
 def alert_email(feed, cfg, entry):
@@ -62,7 +75,7 @@ def alert_log(feed, cfg, entry):
         logger.debug(f"[{feed.name}] {entry.description}")
 
 
-def alert_slack(feed, cfg, entry, color=None):
+async def alert_slack(feed, cfg, entry, level=None, loop=None):
     """
     Sends alert to slack if enabled.
 
@@ -70,6 +83,8 @@ def alert_slack(feed, cfg, entry, color=None):
         feed (:py:class:`Feed`): the feed
         cfg (dict):              output config
         entry (dict):            the feed entry
+        level (str):             forced level for this alert
+        loop:                    active event loop
     """
     logger = logging.LoggerAdapter(log, extra = {
         'feed':  feed.name,
@@ -92,27 +107,24 @@ def alert_slack(feed, cfg, entry, color=None):
     if cfg.get('match_body'):
         matchstring += entry.description
 
-    # use the provided color
-    if cfg.get('force_color'):
-        color = cfg.get('force_color')
+    # use the provided level if we've got a force
+    if cfg.get('force_level'):
+        level = cfg.get('force_level')
 
-    # guess color
-    elif cfg.get('colors'):
-        colors = cfg.get('colors')
-        matches = '(' + '|'.join(colors.keys()) + ')'
+    # try to guess the level
+    elif cfg.get('levels'):
+        levels = cfg.get('levels')
+        matches = '(' + '|'.join(levels.keys()) + ')'
         m = re.search(matches, matchstring)
         if m:
-            for (s, c) in colors.items():
+            for (s, c) in levels.items():
                 if s in m.groups(1):
-                    color = c
+                    level = c
                     break
 
-    # if color isn't set already, try some defaults
-    if not color:
-        color = guess_color(matchstring)['slack']
-
-    # NOTE - this isn't actually used as color here, since it's slack
-    # and now it doesn't do color, but it does do emojis, so...
+    # if the level isn't set already, try some defaults
+    if not level:
+        level = guess_level(matchstring)
 
     # cleanup description to get it supported by slack - might figure out
     # something more elegant later
@@ -124,50 +136,76 @@ def alert_slack(feed, cfg, entry, color=None):
     desc = desc.replace('>', '&gt;')
     desc = desc.replace('&', '&amp;')
 
-    blocks = [
-        {
-            "type": "section",
-            "text": {
-                "type": "mrkdwn",
-                "text": f":{color}: *{feed.name}: {entry.title}*",
-            }
-        },
-        {
-            "type": "section",
-            "text": {
-                "type": "mrkdwn",
-                "text": desc,
-            }
-        },
-        {
-            "type": "section",
-            "fields": [
-                {
-                    "type": "mrkdwn",
-                    "text": "*Date:*\n{entry.datestring}"
-                }
-            ]
-        }
-    ]
+    blocks = _make_blocks(
+        feed        = feed.name,
+        title       = entry.title,
+        message     = desc,
+        alert_class = level,
+        date        = entry.datestring)
+
+
+    def on_result(channel, future):
+        response = future.result()
+        if response['ok']:
+            logger.debug(f"Sent message to slack channel {channel}")
+        else:
+            logger.warning(f"Slack error: {response['response_metadata']}")
+
 
     try:
-        sc = slack.WebClient(cfg.get('token'))
+        sc = slack.WebClient(cfg.get('token'), loop=loop, run_async = True)
         channels = cfg.get('channel')
         if not isinstance(channels, list):
             channels = [channels]
         for channel in channels:
-            response = sc.chat_postMessage(
+            future = sc.chat_postMessage(
                 user        = rssalertbot.BOT_USERNAME,
                 channel     = channel,
                 mrkdwn      = True,
                 as_user     = True,
-                text        = f"*{feed.name}: {entry.title}*",
-                blocks      = blocks,
+                text        = f"*{feed.name}*",
+                attachments = blocks,
             )
-            if response.get('ok'):
-                logger.debug("Sent message to slack channel {channel}")
-            else:
-                logger.warning(f"Slack error: {response['response_metadata']}")
+            future.add_done_callback(functools.partial(on_result, channel))
+            await future
 
     except Exception:
         logger.exception(f"[{feed.name}] Error contacting Slack")
+
+
+def _make_blocks(feed, title, message, alert_class = 'warning', date=None):
+    """Makes the attachments for the slack message"""
+
+    if not date:
+        date = pendulum.now('utc').to_rfc1123_string()
+
+    return [
+        {
+            "color":        SLACK_COLORS[alert_class],
+            "blocks":       [
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": f":{SLACK_ICONS[alert_class]}: *{title}*",
+                    }
+                },
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": message,
+                    }
+                },
+                {
+                    "type": "section",
+                    "fields": [
+                        {
+                            "type": "mrkdwn",
+                            "text": f"*Date:*\n{date}",
+                        }
+                    ]
+                }
+            ]
+        }
+    ]

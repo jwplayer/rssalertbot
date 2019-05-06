@@ -123,8 +123,7 @@ class Feed:
             try:
                 async with session.get(self.url) as response:
                     if response.status != 200:
-                        self._handle_fetch_failure('no data', f"HTTP error {response.status}")
-                        return
+                        return await self._handle_fetch_failure('no data', f"HTTP error {response.status}")
                     return await response.text()
 
             except concurrent.futures.CancelledError:
@@ -135,7 +134,7 @@ class Feed:
                 self._handle_fetch_failure('Exception', f"{etype} fetching feed: {e}")
 
 
-    def _handle_fetch_failure(self, title, description):
+    async def _handle_fetch_failure(self, title, description):
         """
         Handles a fetch failure, at least by logging, possibly by
         alerting too.
@@ -153,7 +152,7 @@ class Feed:
         # if we've been asked to alert on failure, we create
         # a fake event (as a Box) and alert with it
         now = pendulum.now('UTC')
-        self.alert(Box({
+        await self.alert(Box({
             'title':        title,
             'description':  description,
             'published':    pendulum.now('UTC'),
@@ -222,7 +221,7 @@ class Feed:
             self.log.debug(f"Found new entry {entry.published}")
 
             # alert on it
-            self.alert(entry)
+            await self.alert(entry)
 
             if not new_date:
                 new_date = now
@@ -231,7 +230,7 @@ class Feed:
         self.log.info(f"End processing feed {self.name}, previous date {new_date}")
 
 
-    def alert(self, entry):
+    async def alert(self, entry):
         """
         Alert with this entry.
         """
@@ -243,7 +242,7 @@ class Feed:
             rssalertbot.alerts.alert_email(self, self.outputs.get('email'), entry)
 
         if self.outputs.get('slack.enabled'):
-            rssalertbot.alerts.alert_slack(self, self.outputs.get('slack'), entry)
+            await rssalertbot.alerts.alert_slack(self, self.outputs.get('slack'), entry, loop=self.loop)
 
 
     def format_timestamp_local(self, timestamp):
