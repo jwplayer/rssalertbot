@@ -37,7 +37,6 @@ def alert_email(feed, cfg, entry):
         'feed':  feed.name,
         'group': feed.group['name'],
     })
-    logger.setLevel(logging.DEBUG)
 
     logger.debug(f"[{feed.name}] Alerting email: {entry.title}")
 
