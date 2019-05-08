@@ -17,6 +17,8 @@ import rssalertbot
 import rssalertbot.alerts
 from .config import Config
 
+log = logging.getLogger(__name__)
+
 
 class Feed:
     """
@@ -31,7 +33,7 @@ class Feed:
         storage:        Instantiated :py:class:`rssalertbot.storage.BaseStorage` subclass
     """
 
-    def __init__(self, loop, cfg, storage, group, name, url, loglevel=logging.INFO):
+    def __init__(self, loop, cfg, storage, group, name, url):
 
         self.group = group
         self.loop = loop
@@ -40,7 +42,14 @@ class Feed:
         self.url  = url
         self.storage = storage
 
-        self._setup_logging(loglevel)
+        self.log = logging.LoggerAdapter(
+            log,
+            extra = {
+                "feed": self.name,
+                "group": self.group.name,
+            })
+
+        self.log.debug(f"Setting up feed {self.name}")
 
         # start with the global outputs - note the copy so we don't mess
         # with the main config dictionary
@@ -65,32 +74,18 @@ class Feed:
         self.username = group.get('username')
         self.password = group.get('password')
 
+        # sanity tests
+        if self.outputs.get('slack.enabled'):
+            for field in ('slack.channel', 'slack.token'):
+                if not self.outputs.get(field):
+                    self.log.error(f"Slack enabled but {field} not set!")
+                    self.outputs.set('slack.enabled', False)
 
-    def _setup_logging(self, loglevel=logging.INFO):
-        """
-        Setup a logger for this class, which will automatically add
-        some useful extras.
-        """
-
-        logger = logging.getLogger('.'.join((self.__class__.__module__,
-                                   self.__class__.__name__)))
-
-        # setup logging
-        formatter = logging.Formatter(rssalertbot.LOG_FORMAT_FEED)
-        handler = logging.StreamHandler()
-        handler.setFormatter(formatter)
-        logger.handlers = []      # bad hack!
-        logger.propagate = False  # this too!
-        logger.addHandler(handler)
-
-        self.log = logging.LoggerAdapter(
-            logger,
-            extra = {
-                "feed": self.name,
-                "group": self.group.name,
-            })
-
-        self.log.setLevel(loglevel)
+        if self.outputs.get('email.enabled'):
+            for field in ('email.to', 'email.from'):
+                if not self.outputs.get(field):
+                    self.log.error(f"Email enabled but {field} not set!")
+                    self.outputs.set('email.enabled', False)
 
 
     @property
@@ -128,8 +123,7 @@ class Feed:
             try:
                 async with session.get(self.url) as response:
                     if response.status != 200:
-                        self._handle_fetch_failure('no data', f"HTTP error {response.status}")
-                        return
+                        return await self._handle_fetch_failure('no data', f"HTTP error {response.status}")
                     return await response.text()
 
             except concurrent.futures.CancelledError:
@@ -140,7 +134,7 @@ class Feed:
                 self._handle_fetch_failure('Exception', f"{etype} fetching feed: {e}")
 
 
-    def _handle_fetch_failure(self, title, description):
+    async def _handle_fetch_failure(self, title, description):
         """
         Handles a fetch failure, at least by logging, possibly by
         alerting too.
@@ -158,7 +152,7 @@ class Feed:
         # if we've been asked to alert on failure, we create
         # a fake event (as a Box) and alert with it
         now = pendulum.now('UTC')
-        self.alert(Box({
+        await self.alert(Box({
             'title':        title,
             'description':  description,
             'published':    pendulum.now('UTC'),
@@ -200,7 +194,7 @@ class Feed:
             timeout (int): HTTP timeout
         """
 
-        self.log.info(f"Begining processing, previous date {self.previous_date}")
+        self.log.info(f"Begining processing feed {self.name}, previous date {self.previous_date}")
 
         new_date = pendulum.datetime(1970, 1, 1, tz='UTC')
         now = pendulum.now('UTC')
@@ -227,16 +221,16 @@ class Feed:
             self.log.debug(f"Found new entry {entry.published}")
 
             # alert on it
-            self.alert(entry)
+            await self.alert(entry)
 
             if not new_date:
                 new_date = now
 
         self.save_date(new_date)
-        self.log.info(f"End processing, previous date {new_date}")
+        self.log.info(f"End processing feed {self.name}, previous date {new_date}")
 
 
-    def alert(self, entry):
+    async def alert(self, entry):
         """
         Alert with this entry.
         """
@@ -248,7 +242,7 @@ class Feed:
             rssalertbot.alerts.alert_email(self, self.outputs.get('email'), entry)
 
         if self.outputs.get('slack.enabled'):
-            rssalertbot.alerts.alert_slack(self, self.outputs.get('slack'), entry)
+            await rssalertbot.alerts.alert_slack(self, self.outputs.get('slack'), entry, loop=self.loop)
 
 
     def format_timestamp_local(self, timestamp):

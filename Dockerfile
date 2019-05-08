@@ -28,7 +28,7 @@ RUN apk add --no-cache \
 COPY rssalertbot /app/rssalertbot
 COPY CHANGELOG.rst MANIFEST.in setup.py /app/
 WORKDIR /app
-RUN pip3 install '.[dynamo,slack]'
+RUN pip3 install -e '.[dynamo,slack]'
 
 # don't run as root
 USER bot

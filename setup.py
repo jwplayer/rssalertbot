@@ -9,11 +9,11 @@ VERSION = "0.1.0a1"
 try:
     with open(os.path.join(os.path.dirname(__file__), 'CHANGELOG.rst'), 'r') as f:
         for line in f.readlines():
-            m = re.match('(\d+\.\d+\.\d+\S*)', line)
+            m = re.match(r'(\d+\.\d+\.\d+\S*)', line)
             if m:
                 VERSION = m.group(1)
                 break
-except:
+except Exception:
     import warnings
     warnings.warn("version not found, defaulting to {}".format(VERSION))
 
@@ -29,10 +29,12 @@ install_requires = [
     'zc.lockfile'
 ]
 tests_require = install_requires + [
+    'coverage',
     "mock",
     'pynamodb',
     "pytest",
-    'slackclient',
+    'slackclient>=2.0.0,<=2.999.999',
+    'testfixtures',
 ]
 
 setup(
@@ -56,7 +58,7 @@ setup(
             'pynamodb',
         ],
         'slack': [
-            'slackclient',
+            'slackclient>=2.0.0,<=2.999.999',
         ],
     },
     classifiers     = [

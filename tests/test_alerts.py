@@ -1,6 +1,7 @@
 
 import pendulum
 import mock
+import testfixtures
 import unittest
 
 from box import Box
@@ -35,12 +36,16 @@ class AlertsTest(unittest.TestCase):
     def test_alert_log(self):
         feed = Feed()
 
-        # mock :allthethings:
-        rssalertbot.alerts.log = mock.MagicMock()
-        rssalertbot.alerts.alert_log(feed, mock.MagicMock(), self.alertmsg)
+        with testfixtures.LogCapture() as capture:
+            rssalertbot.alerts.alert_log(feed, mock.MagicMock(), self.alertmsg)
 
-        rssalertbot.alerts.log.warning.assert_called_once_with(
-            f"[{feed.name}] {self.alertmsg.published}: {self.alertmsg.title}")
+            capture.check_present(
+                (
+                    'rssalertbot.alerts',
+                    'WARNING',
+                    f"[{feed.name}] {self.alertmsg.published}: {self.alertmsg.title}",
+                )
+            )
 
 
     def test_alert_email(self):
@@ -63,6 +68,13 @@ class AlertsTest(unittest.TestCase):
     def test_alert_slack(self):
 
         config = {
+            'outputs': {
+                'slack': {
+                    'enabled': True,
+                    'channel': '#foo',
+                    'token':   'monkeys',
+                }
+            }
         }
 
         feed = Feed()

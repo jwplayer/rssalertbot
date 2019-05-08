@@ -3,11 +3,14 @@ For handling the config file data.
 """
 
 import json
+import logging
 import os
 import yaml
 
 from box import Box
 from .util import deepmerge
+
+log = logging.getLogger(__name__)
 
 
 class Config(Box):
@@ -92,6 +95,7 @@ class Config(Box):
         if not os.path.isfile(cfgfile):
             raise ValueError(f"Cannot read config file '{cfgfile}'")
 
+        log.debug(f"Loading config file {cfgfile}")
         with open(cfgfile, 'r', encoding=encoding) as f:
             if cfgfile.endswith('.json'):
                 data_dict = json.load(f)

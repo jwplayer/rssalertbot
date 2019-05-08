@@ -2,14 +2,27 @@
 Alerts
 """
 import logging
+import functools
 import re
 import html2text
+import pendulum
 from mailer import Mailer, Message
 
 import rssalertbot
-from .util import guess_color, strip_html
+from .util import guess_level, strip_html
 
 log = logging.getLogger(__name__)
+
+SLACK_COLORS = {
+    'warning':  '#ffc300',
+    'good':     '#00cc00',
+    'alert':    '#cc0000',
+}
+SLACK_ICONS = {
+    'warning':  'warning',
+    'good':     'heavy_check_mark',
+    'alert':    'fire',
+}
 
 
 def alert_email(feed, cfg, entry):
@@ -20,16 +33,25 @@ def alert_email(feed, cfg, entry):
         cfg (dict):              output config
         entry (dict):            the feed entry
     """
-    log.debug(f"Alerting email: {entry.title}")
+    logger = logging.LoggerAdapter(log, extra = {
+        'feed':  feed.name,
+        'group': feed.group['name'],
+    })
+
+    logger.debug(f"[{feed.name}] Alerting email: {entry.title}")
 
     description = strip_html(entry.description)
 
-    smtp = Mailer(host=cfg['server'])
-    message = Message(charset="utf-8", From=cfg['from'], To=cfg['to'],
-                      Subject = f"{feed.group['name']} Alert: ({feed.name}) {entry.title}")
-    message.Body = f"Feed: {feed.name}\nDate: {entry.datestring}\n\n{description}"
-    message.header('X-Mailer', 'rssalertbot')
-    smtp.send(message)
+    try:
+        smtp = Mailer(host=cfg['server'])
+        message = Message(charset="utf-8", From=cfg['from'], To=cfg['to'],
+                          Subject = f"{feed.group['name']} Alert: ({feed.name}) {entry.title}")
+        message.Body = f"Feed: {feed.name}\nDate: {entry.datestring}\n\n{description}"
+        message.header('X-Mailer', 'rssalertbot')
+        smtp.send(message)
+
+    except Exception:
+        logger.exception(f"[{feed.name}] Error sending mail")
 
 
 def alert_log(feed, cfg, entry):
@@ -41,13 +63,18 @@ def alert_log(feed, cfg, entry):
         cfg (dict):              output config
         entry (dict):            the feed entry
     """
+    logger = logging.LoggerAdapter(log, extra = {
+        'feed':  feed.name,
+        'group': feed.group['name'],
+    })
+    logger.setLevel(logging.DEBUG)
 
-    log.warning(f"[{feed.name}] {entry.published}: {entry.title}")
+    logger.warning(f"[{feed.name}] {entry.published}: {entry.title}")
     if entry.description:
-        log.debug(f"[{feed.name}] {entry.description}")
+        logger.debug(f"[{feed.name}] {entry.description}")
 
 
-def alert_slack(feed, cfg, entry, color=None):
+async def alert_slack(feed, cfg, entry, level=None, loop=None):
     """
     Sends alert to slack if enabled.
 
@@ -55,13 +82,21 @@ def alert_slack(feed, cfg, entry, color=None):
         feed (:py:class:`Feed`): the feed
         cfg (dict):              output config
         entry (dict):            the feed entry
+        level (str):             forced level for this alert
+        loop:                    active event loop
     """
+    logger = logging.LoggerAdapter(log, extra = {
+        'feed':  feed.name,
+        'group': feed.group['name'],
+    })
+    logger.setLevel(logging.DEBUG)
+    logger.debug(f"[{feed.name}] Alerting slack: {entry.title}")
 
     # load this here to nicely deal with pip extras
     try:
-        import slackclient
+        import slack
     except ImportError:
-        log.error("Python package 'slackclient' not installed!")
+        logger.error("Python package 'slackclient' not installed!")
         return
 
     # attempt to match keywords in the title
@@ -71,26 +106,24 @@ def alert_slack(feed, cfg, entry, color=None):
     if cfg.get('match_body'):
         matchstring += entry.description
 
-    # use the provided color
-    if cfg.get('force_color'):
-        color = cfg.get('force_color')
+    # use the provided level if we've got a force
+    if cfg.get('force_level'):
+        level = cfg.get('force_level')
 
-    # guess color
-    elif cfg.get('colors'):
-        colors = cfg.get('colors')
-        matches = '(' + '|'.join(colors.keys()) + ')'
+    # try to guess the level
+    elif cfg.get('levels'):
+        levels = cfg.get('levels')
+        matches = '(' + '|'.join(levels.keys()) + ')'
         m = re.search(matches, matchstring)
         if m:
-            for (s, c) in colors.items():
+            for (s, c) in levels.items():
                 if s in m.groups(1):
-                    color = c
+                    level = c
                     break
 
-    # if color isn't set already, try some defaults
-    if not color:
-        color = guess_color(matchstring)['slack']
-
-    log.debug(f"[{feed.name}] Alerting slack: {entry.title} color {color}")
+    # if the level isn't set already, try some defaults
+    if not level:
+        level = guess_level(matchstring)
 
     # cleanup description to get it supported by slack - might figure out
     # something more elegant later
@@ -102,32 +135,76 @@ def alert_slack(feed, cfg, entry, color=None):
     desc = desc.replace('>', '&gt;')
     desc = desc.replace('&', '&amp;')
 
-    attachments = [
-        {
-            "title": f"{feed.name} {entry.datestring}\n{entry.title}",
-            "text": desc,
-            "mrkdwn_in": [
-                "title",
-                "text"
-            ],
-            "color": color
-        }
-    ]
+    blocks = _make_blocks(
+        feed        = feed.name,
+        title       = entry.title,
+        message     = desc,
+        alert_class = level,
+        date        = entry.datestring)
+
+
+    def on_result(channel, future):
+        response = future.result()
+        if response['ok']:
+            logger.debug(f"Sent message to slack channel {channel}")
+        else:
+            logger.warning(f"Slack error: {response['response_metadata']}")
+
 
     try:
-        sc = slackclient.SlackClient(cfg.get('token'))
+        sc = slack.WebClient(cfg.get('token'), loop=loop, run_async = True)
         channels = cfg.get('channel')
         if not isinstance(channels, list):
             channels = [channels]
         for channel in channels:
-            sc.api_call(
-                "chat.postMessage",
-                channel=channel,
-                attachments=attachments,
-                icon_emoji=':information_source:',
-                as_user=False,
-                username=rssalertbot.BOT_USERNAME
+            future = sc.chat_postMessage(
+                user        = rssalertbot.BOT_USERNAME,
+                channel     = channel,
+                mrkdwn      = True,
+                as_user     = True,
+                text        = f"*{feed.name}*",
+                attachments = blocks,
             )
+            future.add_done_callback(functools.partial(on_result, channel))
+            await future
 
-    except Exception as e:
-        log.exception(f"Error contacting Slack for feed {feed.name}")
+    except Exception:
+        logger.exception(f"[{feed.name}] Error contacting Slack")
+
+
+def _make_blocks(feed, title, message, alert_class = 'warning', date=None):
+    """Makes the attachments for the slack message"""
+
+    if not date:
+        date = pendulum.now('utc').to_rfc1123_string()
+
+    return [
+        {
+            "color":        SLACK_COLORS[alert_class],
+            "blocks":       [
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": f":{SLACK_ICONS[alert_class]}: *{title}*",
+                    }
+                },
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": message,
+                    }
+                },
+                {
+                    "type": "section",
+                    "fields": [
+                        {
+                            "type": "mrkdwn",
+                            "text": f"*Date:*\n{date}",
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
