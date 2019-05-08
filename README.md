@@ -1,8 +1,9 @@
 ## rssalertbot
 
-This program is a basic RSS alert feed monitoring program.  It will fetch feeds, and then alert 
-via various means for any entries newer than the previous run.  Currently it supports alerting via
-[Slack](https://slack.com/), and email.
+This program is a basic RSS alert feed monitoring program.  It will fetch feeds,
+and then alert via various means for any entries newer than the previous
+run.  Currently it supports alerting via [Slack](https://slack.com/), and
+email.
 
 ### Configuring
 
@@ -13,6 +14,15 @@ and at least one in "feedgroups":
 outputs:
     log:
         enabled:  True
+    email:
+        enabled:  false
+        from:     feedbot@yourdomain.com
+        to:       alerts@yourdomain.com
+        server:   smtp.yourdomain.com
+    slack:
+        channel:  #alerts
+        enabled:  true
+        token:    its-a-secret
 
 feedgroups:
     - name: DataDog
@@ -28,6 +38,3 @@ See the examples directory for more details.
 ```
 rssalertbot --config config.yaml
 ```
-
-
-
