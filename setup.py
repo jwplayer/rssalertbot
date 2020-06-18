@@ -21,7 +21,7 @@ install_requires = [
     'aiohttp',
     'feedparser==5.2.1',
     'mailer',
-    'pendulum',
+    'pendulum==2.0.4',
     'html2text',
     'python-box~=4.2',
     'PyYAML',
