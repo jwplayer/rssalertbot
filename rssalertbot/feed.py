@@ -123,14 +123,16 @@ class Feed:
             try:
                 async with session.get(self.url) as response:
                     if response.status != 200:
+                        self.log.error("HTTP Error %s fetching feed %s", response.status, self.url)
                         return await self._handle_fetch_failure('no data', f"HTTP error {response.status}")
                     return await response.text()
 
             except concurrent.futures.CancelledError:
+                self.log.error("Timeout fetching feed %s", self.url)
                 self._handle_fetch_failure('Timeout', "Timeout while fetching feed")
 
             except Exception as e:
-                self.log.exception("Error fetching feed")
+                self.log.exception("Error fetching feed %s", self.url)
                 etype = '.'.join((type(e).__module__, type(e).__name__))
                 await self._handle_fetch_failure('Exception', f"{etype} fetching feed: {e}")
 
