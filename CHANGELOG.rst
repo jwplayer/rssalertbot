@@ -2,7 +2,7 @@
 Changelog
 #########
 
-2.3.2 (alertedsnake)
+2.3.3 (alertedsnake)
 --------------------
 
 * Modernize async stuff, fix issues handling awaits

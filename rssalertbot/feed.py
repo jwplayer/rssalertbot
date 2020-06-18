@@ -127,7 +127,7 @@ class Feed:
 
             except concurrent.futures.CancelledError:
                 self.log.error("Timeout fetching feed %s", self.url)
-                self._handle_fetch_failure('Timeout', "Timeout while fetching feed")
+                await self._handle_fetch_failure('Timeout', "Timeout while fetching feed")
 
             except Exception as e:
                 self.log.exception("Error fetching feed %s", self.url)
