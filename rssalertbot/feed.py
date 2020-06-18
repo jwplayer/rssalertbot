@@ -130,15 +130,14 @@ class Feed:
                 self._handle_fetch_failure('Timeout', "Timeout while fetching feed")
 
             except Exception as e:
+                self.log.exception("Error fetching feed")
                 etype = '.'.join((type(e).__module__, type(e).__name__))
                 await self._handle_fetch_failure('Exception', f"{etype} fetching feed: {e}")
-                self.log.exception("Error fetching feed")
 
 
     async def _handle_fetch_failure(self, title, description):
         """
-        Handles a fetch failure, at least by logging, possibly by
-        alerting too.
+        Handles a fetch failure, possibly by alerting.
 
         Args:
             title (str): alert title
@@ -154,7 +153,7 @@ class Feed:
         await self.alert(Box({
             'title':        title,
             'description':  description,
-            'published':    pendulum.now('UTC'),
+            'published':    now,
             'datestring':   self.format_timestamp_local(now),
         }))
 
