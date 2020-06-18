@@ -1,5 +1,6 @@
 
 import unittest
+from parameterized import parameterized
 
 import rssalertbot
 import rssalertbot.util as util
@@ -22,20 +23,17 @@ class UtilTest(unittest.TestCase):
         self.assertIn('Hello world!', stripped)
 
 
-    def test_guess_color(self):
-        """
-        In which we test all the colors are those we think they should be.
-        """
-        result = util.guess_color("monkey")
-        self.assertIn('slack', result)
-        self.assertEqual(result['slack'], 'danger')
+    @parameterized.expand(rssalertbot.KEYS_GREEN)
+    def test_guess_level_good(self, text):
+        result = util.guess_level(text)
+        self.assertEqual(result, 'good')
 
-        for key in rssalertbot.KEYS_YELLOW:
-            result = util.guess_color(key)
-            self.assertIn('slack', result)
-            self.assertEqual(result['slack'], 'warning')
+    @parameterized.expand(rssalertbot.KEYS_YELLOW)
+    def test_guess_level_warning(self, text):
+        result = util.guess_level(text)
+        self.assertEqual(result, 'warning')
 
-        for key in rssalertbot.KEYS_GREEN:
-            result = util.guess_color(key)
-            self.assertIn('slack', result)
-            self.assertEqual(result['slack'], 'good')
+    @parameterized.expand(('bogus', 'error', 'panic'))
+    def test_guess_level_alert(self, text):
+        result = util.guess_level(text)
+        self.assertEqual(result, 'alert')

@@ -1,15 +1,14 @@
 
 import copy
-import mock
 import pendulum
 import testfixtures
 import unittest
 from box import Box
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from rssalertbot.config  import Config
 from rssalertbot.feed    import Feed
 from rssalertbot.storage import BaseStorage
-import rssalertbot.alerts
 
 group = Box({
     "name": "Test Group",
@@ -40,7 +39,7 @@ class MockStorage(BaseStorage):
         self.data[feed] = date
 
 
-class TestFeeds(unittest.TestCase):
+class TestFeeds(unittest.IsolatedAsyncioTestCase):
 
     def test_setup(self):
         """
@@ -49,7 +48,7 @@ class TestFeeds(unittest.TestCase):
 
         config = Config()
 
-        feed = Feed(mock.MagicMock(), config, MockStorage(),
+        feed = Feed(MagicMock(), config, MockStorage(),
                     group, testdata['name'], testdata['url'])
 
         # test the basics
@@ -67,7 +66,7 @@ class TestFeeds(unittest.TestCase):
         self.assertEqual(date, feed.previous_date)
 
 
-    def test_alerts_enabled(self):
+    async def test_alerts_enabled(self):
         """
         In which we make sure enabled alerts are called.
         """
@@ -90,20 +89,22 @@ class TestFeeds(unittest.TestCase):
             },
         })
 
-        feed = Feed(mock.MagicMock(), config, MockStorage(),
+        feed = Feed(MagicMock(), config, MockStorage(),
                     group, testdata['name'], testdata['url'])
 
         self.assertTrue(feed.outputs.get('email.enabled'))
         self.assertTrue(feed.outputs.get('log.enabled'))
         self.assertTrue(feed.outputs.get('slack.enabled'))
 
-        rssalertbot.alerts.alert_email = mock.MagicMock()
-        rssalertbot.alerts.alert_log = mock.MagicMock()
-        rssalertbot.alerts.alert_slack = mock.MagicMock()
-        feed.alert(self.make_entry())
-        rssalertbot.alerts.alert_email.assert_called()
-        rssalertbot.alerts.alert_log.assert_called()
-        rssalertbot.alerts.alert_slack.assert_called()
+        with patch('rssalertbot.alerts', new=AsyncMock) as alerts:
+            alerts.alert_email = MagicMock()
+            alerts.alert_log = MagicMock()
+            alerts.alert_slack = AsyncMock()
+
+            await feed.alert(self.make_entry())
+            alerts.alert_email.assert_called()
+            alerts.alert_log.assert_called()
+            alerts.alert_slack.assert_awaited()
 
 
     def test_alert_slack_missing_values(self):
@@ -119,7 +120,7 @@ class TestFeeds(unittest.TestCase):
         mygroup = copy.deepcopy(group)
         with testfixtures.LogCapture() as capture:
             Feed(
-                loop     = mock.MagicMock(),
+                loop     = MagicMock(),
                 cfg      = config,
                 storage  = MockStorage(),
                 group    = mygroup,
@@ -134,7 +135,7 @@ class TestFeeds(unittest.TestCase):
             )
 
 
-    def test_alerts_disabled(self):
+    async def test_alerts_disabled(self):
         """
         In which we make sure disabled alerts are NOT called.
         """
@@ -154,7 +155,7 @@ class TestFeeds(unittest.TestCase):
             },
         })
 
-        feed = Feed(mock.MagicMock(), config, MockStorage(),
+        feed = Feed(MagicMock(), config, MockStorage(),
                     group, testdata['name'], testdata['url'])
 
         self.assertFalse(feed.outputs.get('email.enabled'))
@@ -163,15 +164,17 @@ class TestFeeds(unittest.TestCase):
         # the group overrides this one!
         self.assertTrue(feed.outputs.get('log.enabled'))
 
-        rssalertbot.alerts.alert_email = mock.MagicMock()
-        rssalertbot.alerts.alert_log = mock.MagicMock()
-        rssalertbot.alerts.alert_slack = mock.MagicMock()
-        feed.alert(self.make_entry())
-        rssalertbot.alerts.alert_email.assert_not_called()
-        rssalertbot.alerts.alert_slack.assert_not_called()
+        with patch('rssalertbot.alerts') as alerts:
+            alerts.alert_email = MagicMock()
+            alerts.alert_log = MagicMock()
+            alerts.alert_slack = AsyncMock()
 
-        # again, the group overrides this!
-        rssalertbot.alerts.alert_log.assert_called()
+            await feed.alert(self.make_entry())
+            alerts.alert_email.assert_not_called()
+            alerts.alert_slack.assert_not_awaited()
+
+            # again, the group overrides this!
+            alerts.alert_log.assert_called()
 
 
     def make_entry(self, title="test entry", description="test description", date=None):

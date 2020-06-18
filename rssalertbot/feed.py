@@ -127,11 +127,12 @@ class Feed:
                     return await response.text()
 
             except concurrent.futures.CancelledError:
-                self._handle_fetch_failure('Timeout', f"Timeout while fetching feed")
+                self._handle_fetch_failure('Timeout', "Timeout while fetching feed")
 
             except Exception as e:
                 etype = '.'.join((type(e).__module__, type(e).__name__))
-                self._handle_fetch_failure('Exception', f"{etype} fetching feed: {e}")
+                await self._handle_fetch_failure('Exception', f"{etype} fetching feed: {e}")
+                self.log.exception("Error fetching feed")
 
 
     async def _handle_fetch_failure(self, title, description):
@@ -143,8 +144,6 @@ class Feed:
             title (str): alert title
             description (str): alert description
         """
-
-        self.log.error(f"{title}: {description}")
 
         if not self.group.get('alert_on_failure', False):
             return
@@ -181,7 +180,7 @@ class Feed:
 
             data = feedparser.parse(rsp)
             if not data:
-                self.log.error(f"Error: no data recieved")
+                self.log.error("Error: no data recieved")
                 return []
             return data.entries
 

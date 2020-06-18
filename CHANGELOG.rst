@@ -2,6 +2,12 @@
 Changelog
 #########
 
+2.3.1 (alertedsnake)
+--------------------
+
+* Minor bugfixes
+* Do async tests properly
+
 2.3.0 (alertedsnake)
 --------------------
 
