@@ -2,7 +2,6 @@
 Alerts
 """
 import logging
-import functools
 import re
 import html2text
 import pendulum
@@ -157,7 +156,7 @@ async def alert_slack(feed, cfg, entry, level=None, loop=None):
         if not isinstance(channels, list):
             channels = [channels]
         for channel in channels:
-            future = sc.chat_postMessage(
+            await sc.chat_postMessage(
                 user        = rssalertbot.BOT_USERNAME,
                 channel     = channel,
                 mrkdwn      = True,
@@ -165,8 +164,6 @@ async def alert_slack(feed, cfg, entry, level=None, loop=None):
                 text        = f"*{feed.name}*",
                 attachments = blocks,
             )
-            future.add_done_callback(functools.partial(on_result, channel))
-            await future
 
     except Exception:
         logger.exception(f"[{feed.name}] Error contacting Slack")

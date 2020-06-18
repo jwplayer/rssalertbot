@@ -123,28 +123,28 @@ class Feed:
             try:
                 async with session.get(self.url) as response:
                     if response.status != 200:
+                        self.log.error("HTTP Error %s fetching feed %s", response.status, self.url)
                         return await self._handle_fetch_failure('no data', f"HTTP error {response.status}")
                     return await response.text()
 
             except concurrent.futures.CancelledError:
-                self._handle_fetch_failure('Timeout', f"Timeout while fetching feed")
+                self.log.error("Timeout fetching feed %s", self.url)
+                self._handle_fetch_failure('Timeout', "Timeout while fetching feed")
 
             except Exception as e:
+                self.log.exception("Error fetching feed %s", self.url)
                 etype = '.'.join((type(e).__module__, type(e).__name__))
-                self._handle_fetch_failure('Exception', f"{etype} fetching feed: {e}")
+                await self._handle_fetch_failure('Exception', f"{etype} fetching feed: {e}")
 
 
     async def _handle_fetch_failure(self, title, description):
         """
-        Handles a fetch failure, at least by logging, possibly by
-        alerting too.
+        Handles a fetch failure, possibly by alerting.
 
         Args:
             title (str): alert title
             description (str): alert description
         """
-
-        self.log.error(f"{title}: {description}")
 
         if not self.group.get('alert_on_failure', False):
             return
@@ -155,7 +155,7 @@ class Feed:
         await self.alert(Box({
             'title':        title,
             'description':  description,
-            'published':    pendulum.now('UTC'),
+            'published':    now,
             'datestring':   self.format_timestamp_local(now),
         }))
 
@@ -181,7 +181,7 @@ class Feed:
 
             data = feedparser.parse(rsp)
             if not data:
-                self.log.error(f"Error: no data recieved")
+                self.log.error("Error: no data recieved")
                 return []
             return data.entries
 

@@ -19,21 +19,20 @@ except Exception:
 
 install_requires = [
     'aiohttp',
-    'dateparser',
     'feedparser==5.2.1',
     'mailer',
     'pendulum',
     'html2text',
-    'python-box>=3.1.1,<=3.999.999',
+    'python-box~=4.2',
     'PyYAML',
     'zc.lockfile'
 ]
 tests_require = install_requires + [
     'coverage',
-    "mock",
+    'parameterized',
     'pynamodb',
     "pytest",
-    'slackclient>=2.0.0,<=2.999.999',
+    'slackclient~=2.5',
     'testfixtures',
 ]
 
@@ -58,7 +57,7 @@ setup(
             'pynamodb',
         ],
         'slack': [
-            'slackclient>=2.0.0,<=2.999.999',
+            'slackclient~=2.5',
         ],
     },
     classifiers     = [

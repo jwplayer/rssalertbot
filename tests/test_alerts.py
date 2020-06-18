@@ -1,10 +1,10 @@
 
 import pendulum
-import mock
 import testfixtures
 import unittest
 
 from box import Box
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import rssalertbot.alerts
 
@@ -17,13 +17,13 @@ class Feed:
 
 
 class MockMailer:
-    send = mock.MagicMock()
+    send = MagicMock()
 
     def __init__(self, *args, **kwargs):
         pass
 
 
-class AlertsTest(unittest.TestCase):
+class AlertsTest(unittest.IsolatedAsyncioTestCase):
 
     alertmsg = Box({
         'title':        'test alert',
@@ -37,7 +37,7 @@ class AlertsTest(unittest.TestCase):
         feed = Feed()
 
         with testfixtures.LogCapture() as capture:
-            rssalertbot.alerts.alert_log(feed, mock.MagicMock(), self.alertmsg)
+            rssalertbot.alerts.alert_log(feed, MagicMock(), self.alertmsg)
 
             capture.check_present(
                 (
@@ -58,14 +58,14 @@ class AlertsTest(unittest.TestCase):
 
         # mock :allthethings:
         rssalertbot.alerts.Mailer = MockMailer
-        rssalertbot.alerts.Mailer.send = mock.MagicMock()
+        rssalertbot.alerts.Mailer.send = MagicMock()
         rssalertbot.alerts.alert_email(feed, config, self.alertmsg)
 
         # just make sure we've called this
         rssalertbot.alerts.Mailer.send.assert_called()
 
 
-    def test_alert_slack(self):
+    async def test_alert_slack(self):
 
         config = {
             'outputs': {
@@ -79,15 +79,10 @@ class AlertsTest(unittest.TestCase):
 
         feed = Feed()
 
-        # mock the import
-        import sys
-        mock_client = mock.MagicMock()
-        mock_client.api_call = mock.MagicMock()
-        slackclient = mock.MagicMock()
-        slackclient.SlackClient = mock.MagicMock(return_value = mock_client)
+        with patch('slack.WebClient', new=AsyncMock) as slackclient:
+            # we want this to have been called
+            slackclient.chat_postMessage = AsyncMock()
 
-        sys.modules['slackclient'] = slackclient
+            await rssalertbot.alerts.alert_slack(feed, config, self.alertmsg)
 
-        rssalertbot.alerts.alert_slack(feed, config, self.alertmsg)
-
-        mock_client.api_call.assert_called()
+            slackclient.chat_postMessage.assert_awaited()

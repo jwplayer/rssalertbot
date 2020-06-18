@@ -1,5 +1,5 @@
-FROM alpine:3.8
-MAINTAINER Michael Stella <michael@jwplayer.com>
+FROM alpine:3.12
+LABEL Maintainer="Michael Stella <michael@jwplayer.com>"
 
 ARG PIP_EXTRA_INDEX_URL
 ENV PYTHON_EGG_CACHE=/tmp \
@@ -16,7 +16,7 @@ RUN addgroup bot \
 
 RUN apk add --no-cache \
         ca-certificates \
-        libssl1.0 \
+        libssl1.1 \
         python3 \
         tini \
         yaml \
