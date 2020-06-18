@@ -5,7 +5,8 @@ ARG PIP_EXTRA_INDEX_URL
 ENV PYTHON_EGG_CACHE=/tmp \
     PYTHONPATH=/app \
     PIP_NO_CACHE_DIR=0 \
-    PIP_EXTRA_INDEX_URL=$PIP_EXTRA_INDEX_URL
+    PIP_EXTRA_INDEX_URL=$PIP_EXTRA_INDEX_URL \
+    TZ=UTC
 
 ENTRYPOINT ["tini", "--", "rssalertbot"]
 
@@ -20,9 +21,13 @@ RUN apk add --no-cache \
         python3 \
         py3-pip \
         tini \
+        tzdata \
         yaml \
     && rm -rf /var/cache/apk/*  \
     && ln -s /usr/bin/python3 /usr/bin/python
+
+# setup timezone
+RUN cp /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ >/etc/timezone && apk del tzdata
 
 # install the application
 COPY rssalertbot /app/rssalertbot

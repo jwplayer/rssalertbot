@@ -2,6 +2,12 @@
 Changelog
 #########
 
+2.3.2 (alertedsnake)
+--------------------
+
+* Modernize async stuff, fix issues handling awaits
+* Set up timezone in Docker - this is needed for timing
+
 2.3.1 (alertedsnake)
 --------------------
 

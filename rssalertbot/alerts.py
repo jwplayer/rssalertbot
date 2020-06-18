@@ -73,7 +73,7 @@ def alert_log(feed, cfg, entry):
         logger.debug(f"[{feed.name}] {entry.description}")
 
 
-async def alert_slack(feed, cfg, entry, level=None, loop=None):
+async def alert_slack(feed, cfg, entry, level=None):
     """
     Sends alert to slack if enabled.
 
@@ -82,7 +82,6 @@ async def alert_slack(feed, cfg, entry, level=None, loop=None):
         cfg (dict):              output config
         entry (dict):            the feed entry
         level (str):             forced level for this alert
-        loop:                    active event loop
     """
     logger = logging.LoggerAdapter(log, extra = {
         'feed':  feed.name,
@@ -151,7 +150,7 @@ async def alert_slack(feed, cfg, entry, level=None, loop=None):
 
 
     try:
-        sc = slack.WebClient(cfg.get('token'), loop=loop, run_async = True)
+        sc = slack.WebClient(cfg.get('token'), run_async = True)
         channels = cfg.get('channel')
         if not isinstance(channels, list):
             channels = [channels]

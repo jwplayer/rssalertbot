@@ -25,7 +25,6 @@ class Feed:
     A feed.
 
     Args:
-        loop:           active asyncio event loop
         cfg (Box):      full configuration
         group (Box):    the group config
         name (str):     Feed name
@@ -33,10 +32,9 @@ class Feed:
         storage:        Instantiated :py:class:`rssalertbot.storage.BaseStorage` subclass
     """
 
-    def __init__(self, loop, cfg, storage, group, name, url):
+    def __init__(self, cfg, storage, group, name, url):
 
         self.group = group
-        self.loop = loop
         self.cfg  = cfg
         self.name = name
         self.url  = url
@@ -119,7 +117,7 @@ class Feed:
         """
 
         self.log.debug(f"Fetching url: {self.url}")
-        with async_timeout.timeout(timeout, loop=self.loop):
+        with async_timeout.timeout(timeout):
             try:
                 async with session.get(self.url) as response:
                     if response.status != 200:
@@ -242,7 +240,7 @@ class Feed:
             rssalertbot.alerts.alert_email(self, self.outputs.get('email'), entry)
 
         if self.outputs.get('slack.enabled'):
-            await rssalertbot.alerts.alert_slack(self, self.outputs.get('slack'), entry, loop=self.loop)
+            await rssalertbot.alerts.alert_slack(self, self.outputs.get('slack'), entry)
 
 
     def format_timestamp_local(self, timestamp):

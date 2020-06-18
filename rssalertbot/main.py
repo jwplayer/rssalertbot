@@ -104,13 +104,11 @@ def main():
     if opts.no_notify:
         cfg.set('no_notify', False)
 
-    # startup our event loop and run stuff
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(run(loop, opts, cfg))
-    loop.close()
+    # here we go
+    asyncio.run(run(opts, cfg))
 
 
-async def run(loop, opts, cfg):
+async def run(opts, cfg):
 
     storage = setup_storage(cfg.get('storage', {}))
     locker = setup_locking(cfg.get('locking', {}))
@@ -119,7 +117,6 @@ async def run(loop, opts, cfg):
     for group in cfg.get('feedgroups', []):
         for f in group['feeds']:
             feed = Feed(
-                loop     = loop,
                 cfg      = cfg,
                 storage  = storage,
                 group    = group,
@@ -135,9 +132,8 @@ async def run(loop, opts, cfg):
         log.warning("Lock not acquired, skipping this run.")
         return
 
-    # now we wait for them to finish
+    # now we wait for the tasks to finish
     try:
-        for task in tasks:
-            await task
+        await asyncio.wait(tasks)
     finally:
         lock.release()
