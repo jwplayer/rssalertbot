@@ -18,17 +18,17 @@ RUN apk add --no-cache \
         ca-certificates \
         libssl1.1 \
         python3 \
+        py3-pip \
         tini \
         yaml \
     && rm -rf /var/cache/apk/*  \
-    && ln -s /usr/bin/python3 /usr/bin/python \
-    && pip3 install -U pip setuptools
+    && ln -s /usr/bin/python3 /usr/bin/python
 
 # install the application
 COPY rssalertbot /app/rssalertbot
 COPY CHANGELOG.rst MANIFEST.in setup.py /app/
 WORKDIR /app
-RUN pip3 install -e '.[dynamo,slack]'
+RUN pip install -e '.[dynamo,slack]'
 
 # don't run as root
 USER bot
