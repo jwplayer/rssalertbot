@@ -19,7 +19,12 @@ RUN apk add --no-cache \
         ca-certificates \
         libssl1.1 \
         python3 \
+        py3-aiohttp \
+        py3-cryptography \
+        py3-feedparser \
         py3-pip \
+        py3-setuptools \
+        py3-wheel \
         tini \
         tzdata \
         yaml \

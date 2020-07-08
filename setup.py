@@ -25,7 +25,7 @@ install_requires = [
     'html2text',
     'python-box~=4.2',
     'PyYAML',
-    'zc.lockfile'
+    'zc.lockfile',
 ]
 tests_require = install_requires + [
     'coverage',
