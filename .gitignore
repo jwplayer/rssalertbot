@@ -11,6 +11,7 @@ doc/.build
 rpm/*.tar.gz
 env/
 .idea/
+.vscode/
 include
 .Python
 pip-selfcheck.json
