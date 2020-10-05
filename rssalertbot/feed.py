@@ -40,6 +40,8 @@ class Feed:
         self.url  = url
         self.storage = storage
 
+        self.feed = f'{self.group.name}-{self.name}'
+
         self.log = logging.LoggerAdapter(
             log,
             extra = {
@@ -89,8 +91,7 @@ class Feed:
     @property
     def previous_date(self):
         """Get the previous date from storage"""
-        key = f'{self.group.name}-{self.name}'
-        return self.storage.last_update(key)
+        return self.storage.last_update(self.feed)
 
 
     def save_date(self, new_date: pendulum.DateTime):
@@ -100,8 +101,7 @@ class Feed:
         Args:
             date: obviously, the date
         """
-        key = f'{self.group.name}-{self.name}'
-        self.storage.save_date(key, new_date)
+        self.storage.save_date(self.feed, new_date)
 
 
     async def _fetch(self, session, timeout=10):
