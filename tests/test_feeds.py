@@ -174,6 +174,29 @@ class TestFeeds(unittest.IsolatedAsyncioTestCase):
             alerts.alert_log.assert_called()
 
 
+    def test_previous_date_recent(self):
+        stored_date = pendulum.now('UTC').subtract(minutes=10)
+        storage = MockStorage()
+        storage.data = {f"{group.name}-{testdata['name']}": stored_date}
+        feed = Feed(Config(), storage, group, testdata['name'], testdata['url'])
+        self.assertEqual(stored_date, feed.previous_date)
+
+
+    def test_previous_date_old(self):
+        stored_date = pendulum.now('UTC').subtract(days=10)
+        storage = MockStorage()
+        storage.data = {f"{group.name}-{testdata['name']}": stored_date}
+        feed = Feed(Config(), storage, group, testdata['name'], testdata['url'])
+        self.assertEqual(pendulum.yesterday('UTC'), feed.previous_date)
+
+
+    def test_previous_date_not_found(self):
+        storage = MockStorage()
+        storage.data = {f"{group.name}-{testdata['name']}": None}
+        feed = Feed(Config(), storage, group, testdata['name'], testdata['url'])
+        self.assertEqual(pendulum.yesterday('UTC'), feed.previous_date)
+
+
     def make_entry(self, title="test entry", description="test description", date=None):
         """
         Make a test entry
