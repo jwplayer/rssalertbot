@@ -49,7 +49,7 @@ class TestFeeds(unittest.IsolatedAsyncioTestCase):
 
         config = Config()
 
-        feed = Feed(config, group, testdata['name'], testdata['url'], MockStorage())
+        feed = Feed(config, MockStorage(), group, testdata['name'], testdata['url'])
 
         # test the basics
         self.assertEqual(feed.name, testdata['name'])
@@ -89,7 +89,7 @@ class TestFeeds(unittest.IsolatedAsyncioTestCase):
             },
         })
 
-        feed = Feed(config, group, testdata['name'], testdata['url'], MockStorage())
+        feed = Feed(config, MockStorage(), group, testdata['name'], testdata['url'])
 
         self.assertTrue(feed.outputs.get('email.enabled'))
         self.assertTrue(feed.outputs.get('log.enabled'))
@@ -153,7 +153,7 @@ class TestFeeds(unittest.IsolatedAsyncioTestCase):
             },
         })
 
-        feed = Feed(config, group, testdata['name'], testdata['url'], MockStorage())
+        feed = Feed(config, MockStorage(), group, testdata['name'], testdata['url'])
 
         self.assertFalse(feed.outputs.get('email.enabled'))
         self.assertFalse(feed.outputs.get('slack.enabled'))

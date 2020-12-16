@@ -27,19 +27,19 @@ class Feed:
 
     Args:
         cfg (Box):      full configuration
+        storage:        Instantiated :py:class:`rssalertbot.storage.BaseStorage` subclass
         group (Box):    the group config
         name (str):     Feed name
         url (str):      URL to fetch
-        storage:        Instantiated :py:class:`rssalertbot.storage.BaseStorage` subclass
     """
 
     def __init__(self, cfg, storage, group, name, url):
 
-        self.group = group
         self.cfg  = cfg
+        self.storage = storage
+        self.group = group
         self.name = name
         self.url  = url
-        self.storage = storage
 
         self.feed = f'{self.group.name}-{self.name}'
 
