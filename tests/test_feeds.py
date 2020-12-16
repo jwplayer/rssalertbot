@@ -30,13 +30,14 @@ class MockStorage(BaseStorage):
     def __init__(self, *args, **kwargs):
         self.data = {}
 
+    def _read(self, name):
+        return self.data.get(name, pendulum.now('UTC'))
 
-    def last_update(self, feed) -> pendulum.DateTime:
-        return self.data.get(feed, pendulum.now('UTC'))
+    def _write(self, name, date):
+        self.data[name] = date
 
-
-    def save_date(self, feed, date: pendulum.DateTime):
-        self.data[feed] = date
+    def _delete(self, name):
+        pass
 
 
 class TestFeeds(unittest.IsolatedAsyncioTestCase):
@@ -48,8 +49,7 @@ class TestFeeds(unittest.IsolatedAsyncioTestCase):
 
         config = Config()
 
-        feed = Feed(MagicMock(), config, MockStorage(),
-                    group, testdata['name'], testdata['url'])
+        feed = Feed(config, group, testdata['name'], testdata['url'], MockStorage())
 
         # test the basics
         self.assertEqual(feed.name, testdata['name'])
@@ -89,8 +89,7 @@ class TestFeeds(unittest.IsolatedAsyncioTestCase):
             },
         })
 
-        feed = Feed(MagicMock(), config, MockStorage(),
-                    group, testdata['name'], testdata['url'])
+        feed = Feed(config, group, testdata['name'], testdata['url'], MockStorage())
 
         self.assertTrue(feed.outputs.get('email.enabled'))
         self.assertTrue(feed.outputs.get('log.enabled'))
@@ -120,7 +119,6 @@ class TestFeeds(unittest.IsolatedAsyncioTestCase):
         mygroup = copy.deepcopy(group)
         with testfixtures.LogCapture() as capture:
             Feed(
-                loop     = MagicMock(),
                 cfg      = config,
                 storage  = MockStorage(),
                 group    = mygroup,
@@ -155,8 +153,7 @@ class TestFeeds(unittest.IsolatedAsyncioTestCase):
             },
         })
 
-        feed = Feed(MagicMock(), config, MockStorage(),
-                    group, testdata['name'], testdata['url'])
+        feed = Feed(config, group, testdata['name'], testdata['url'], MockStorage())
 
         self.assertFalse(feed.outputs.get('email.enabled'))
         self.assertFalse(feed.outputs.get('slack.enabled'))

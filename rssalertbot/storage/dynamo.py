@@ -25,6 +25,8 @@ class DynamoStorage(BaseStorage):
     """
     Base class for storing state.
     """
+    not_found_exception_class = DoesNotExist
+
     def __init__(self, table=None, url=None, region='us-east-1'):
 
         self.url = url
@@ -57,11 +59,8 @@ class DynamoStorage(BaseStorage):
 
 
     def _read(self, name):
-        try:
-            obj = FeedState.get(name)
-            return obj.last_run
-        except DoesNotExist:
-            return None
+        obj = FeedState.get(name)
+        return obj.last_run
 
 
     def _write(self, name, date):
@@ -74,37 +73,6 @@ class DynamoStorage(BaseStorage):
         log.debug(f"Saved date for '{name}'")
 
 
-    def last_update(self, feed) -> pendulum.DateTime:
-        """
-        Get the last updated date for the given feed
-        """
-        return self._read(feed)
-
-
-    def save_date(self, feed, date: pendulum.DateTime):
-        """
-        Save the last updated date for the given feed
-        """
-        self._write(feed, date)
-
-
-    def load_event(self, feed, event_id):
-        """
-        Load the last sent date for an event
-        """
-        self._read(self._event_name(feed, event_id))
-
-
-    def save_event(self, feed, event_id, date: pendulum.DateTime):
-        """
-        Save the last sent date for an event
-        """
-        self._write(self._event_name(feed, event_id), date)
-
-
-    def delete_event(self, feed, event_id):
-        """
-        Delete an event
-        """
+    def _delete(self, name):
         obj = FeedState.get(self._event_name(feed, event_id))
         obj.delete()

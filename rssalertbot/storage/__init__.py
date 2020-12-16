@@ -6,47 +6,64 @@ class BaseStorage(ABC):
     """
     Base class for storing state.
     """
+    not_found_exception_class = Exception
+
+    @abstractmethod
+    def _read(self, name):
+        pass
+
+
+    @abstractmethod
+    def _write(self, name, date):
+        pass
+
+
+    @abstractmethod
+    def _delete(self, name):
+        pass
 
 
     def _event_name(self, feed, event_id):
         return '-'.join((feed, event_id))
 
 
-    @abstractmethod
+    def _read_or_none(self, name):
+        try:
+            return self._read(name)
+        except self.not_found_exception_class:
+            return None
+
+
     def last_update(self, feed) -> pendulum.DateTime:
         """
         Get the last updated date for the given feed
         """
-        pass
+        return self._read_or_none(feed)
 
 
-    @abstractmethod
     def save_date(self, feed, date: pendulum.DateTime):
         """
         Save the last updated date for the given feed
         """
-        pass
+        self._write(feed, date)
 
 
-    @abstractmethod
     def load_event(self, feed, event_id):
         """
         Load the last sent date for an event
         """
-        pass
+        self._read_or_none(self._event_name(feed, event_id))
 
 
-    @abstractmethod
     def save_event(self, feed, event_id, date: pendulum.DateTime):
         """
         Save the last sent date for an event
         """
-        pass
+        self._write(self._event_name(feed, event_id), date)
 
 
-    @abstractmethod
     def delete_event(self, feed, event_id):
         """
         Delete an event
         """
-        pass
+        self._delete(self._event_name(feed, event_id))
