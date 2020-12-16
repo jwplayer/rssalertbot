@@ -57,8 +57,11 @@ class DynamoStorage(BaseStorage):
 
 
     def _read(self, name):
-        obj = FeedState.get(name)
-        return obj.last_run
+        try:
+            obj = FeedState.get(name)
+            return obj.last_run
+        except DoesNotExist:
+            return None
 
 
     def _write(self, name, date):
@@ -75,10 +78,7 @@ class DynamoStorage(BaseStorage):
         """
         Get the last updated date for the given feed
         """
-        try:
-            return self._read(feed)
-        except DoesNotExist:
-            return pendulum.yesterday('UTC')
+        return self._read(feed)
 
 
     def save_date(self, feed, date: pendulum.DateTime):
@@ -92,10 +92,7 @@ class DynamoStorage(BaseStorage):
         """
         Load the last sent date for an event
         """
-        try:
-            return self._read(self._event_name(feed, event_id))
-        except DoesNotExist:
-            return None
+        self._read(self._event_name(feed, event_id))
 
 
     def save_event(self, feed, event_id, date: pendulum.DateTime):

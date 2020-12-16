@@ -36,6 +36,8 @@ KEYS_YELLOW = (
 
 FEED_TIMEOUT = 10
 
+RE_ALERT_DEFAULT = '24h'
+
 BOGUS_TIMEZONES = {
     'PST': -800,
     'PDT': -700,

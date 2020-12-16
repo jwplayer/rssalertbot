@@ -22,8 +22,11 @@ class FileStorage(BaseStorage):
 
 
     def _read_file(self, filename):
-        with open(self._datafile(filename), 'r') as f:
-            return pendulum.parse(f.read().strip())
+        try:
+            with open(self._datafile(filename), 'r') as f:
+                return pendulum.parse(f.read().strip())
+        except IOError:
+            return None
 
 
     def _write_file(self, filename, date):
@@ -38,11 +41,7 @@ class FileStorage(BaseStorage):
         """
         Get the last updated date for the given feed
         """
-        try:
-            return self._read_file(feed)
-        except IOError as e:
-            log.debug(f"Error reading data file: {e}")
-            return pendulum.yesterday('UTC')
+        return self._read_file(feed)
 
 
     def save_date(self, feed, date: pendulum.DateTime):
@@ -56,10 +55,7 @@ class FileStorage(BaseStorage):
         """
         Load the last sent date for an event
         """
-        try:
-            return self._read_file(self._event_name(feed, event_id))
-        except IOError:
-            return None
+        return self._read_file(self._event_name(feed, event_id))
 
 
     def save_event(self, feed, event_id, date: pendulum.DateTime):
