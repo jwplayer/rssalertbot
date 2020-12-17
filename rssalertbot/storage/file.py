@@ -36,4 +36,4 @@ class FileStorage(BaseStorage):
 
 
     def _delete(self, name):
-        os.remove(self._datafile(self._event_name(feed, event_id)))
+        os.remove(self._datafile(name))

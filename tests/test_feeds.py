@@ -339,8 +339,6 @@ class TestFeedProcessing(unittest.IsolatedAsyncioTestCase):
 
     async def test_process_multiple_messages(self):
         self.publish_date = self.publish_date.subtract(minutes=10)
-        future_publish_date = self.publish_date.add(days=2)
-        older_publish_date = self.publish_date.subtract(minutes=10)
         future_event_title = "Notice: The future is coming"
         future_event_description = "Issue summary: something's gonna happen but I forget what"
         rss = f"""
@@ -353,7 +351,7 @@ class TestFeedProcessing(unittest.IsolatedAsyncioTestCase):
                 <item>
                     <title>{future_event_title}</title>
                     <description>{future_event_description}</description>
-                    <pubDate>{future_publish_date.to_rss_string()}</pubDate>
+                    <pubDate>{self.publish_date.add(days=2).to_rss_string()}</pubDate>
                     <link>https://status.fake.thing/zyxwvu</link>
                     <guid>https://status.fake.thing/zyxwvu</guid>
                 </item>
@@ -367,7 +365,7 @@ class TestFeedProcessing(unittest.IsolatedAsyncioTestCase):
                 <item>
                     <title>{self.event_title}</title>
                     <description>{self.event_description}</description>
-                    <pubDate>{older_publish_date.to_rss_string()}</pubDate>
+                    <pubDate>{self.publish_date.subtract(minutes=10).to_rss_string()}</pubDate>
                     <link>https://status.fake.thing/abcdef</link>
                     <guid>https://status.fake.thing/abcdef</guid>
                 </item>

@@ -74,5 +74,5 @@ class DynamoStorage(BaseStorage):
 
 
     def _delete(self, name):
-        obj = FeedState.get(self._event_name(feed, event_id))
+        obj = FeedState.get(name)
         obj.delete()
