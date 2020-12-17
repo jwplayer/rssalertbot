@@ -52,7 +52,7 @@ class BaseStorage(ABC):
         """
         Load the last sent date for an event
         """
-        self._read_or_none(self._event_name(feed, event_id))
+        return self._read_or_none(self._event_name(feed, event_id))
 
 
     def save_event(self, feed, event_id, date: pendulum.DateTime):

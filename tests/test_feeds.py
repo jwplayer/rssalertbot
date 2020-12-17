@@ -1,9 +1,11 @@
 
 import copy
+import feedparser
 import pendulum
 import testfixtures
 import unittest
 from box import Box
+from hashlib import md5
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from rssalertbot.config  import Config
@@ -31,13 +33,13 @@ class MockStorage(BaseStorage):
         self.data = {}
 
     def _read(self, name):
-        return self.data.get(name, pendulum.now('UTC'))
+        return self.data.get(name)
 
     def _write(self, name, date):
         self.data[name] = date
 
     def _delete(self, name):
-        pass
+        del self.data[name]
 
 
 class TestFeeds(unittest.IsolatedAsyncioTestCase):
@@ -62,7 +64,7 @@ class TestFeeds(unittest.IsolatedAsyncioTestCase):
 
         # test we can get save a date and get it back
         date = pendulum.now('UTC')
-        feed.save_date(date)
+        feed.storage.save_date(feed.feed, date)
         self.assertEqual(date, feed.previous_date)
 
 
@@ -208,3 +210,175 @@ class TestFeeds(unittest.IsolatedAsyncioTestCase):
             'published':    date,
             'datestring':   date.to_rfc1123_string(),
         })
+
+
+class TestFeedProcessing(unittest.IsolatedAsyncioTestCase):
+
+    def setUp(self):
+        self.now = pendulum.now('UTC')
+        self.publish_date = self.now
+        self.event_title = "Incident: Things are not going well!"
+        self.event_description = "Issue summary: OH NO"
+        self.storage = MockStorage()
+        self.storage.save_event = MagicMock(wraps=self.storage.save_event)
+        self.storage.delete_event = MagicMock(wraps=self.storage.delete_event)
+        self.feed = Feed(Config(), self.storage, group, testdata['name'], testdata['url'])
+        self.feed.alert = AsyncMock()
+
+
+    def storage_name(self):
+        event_id = md5((self.event_title + self.event_description).encode()).hexdigest()
+        return f"{self.feed.feed}-{event_id}"
+
+
+    async def process_feed(self, rss=None):
+        if not rss:
+            rss = f"""
+            <rss xmlns:dc="http://purl.org/dc/elements/1.1/" version="2.0">
+                <channel>
+                    <title>Fake System Status</title>
+                    <link>https://status.fake.system/</link>
+                    <description>Fake System Status Notices</description>
+                    <lastBuildDate>{self.publish_date.to_rss_string()}</lastBuildDate>
+                    <item>
+                        <title>{self.event_title}</title>
+                        <description>{self.event_description}</description>
+                        <pubDate>{self.publish_date.to_rss_string()}</pubDate>
+                        <link>https://status.fake.system/abcdef</link>
+                        <guid>https://status.fake.system/abcdef</guid>
+                    </item>
+                </channel>
+            </rss>
+            """
+        self.feed.fetch_and_parse = AsyncMock(return_value=feedparser.parse(rss).entries)
+        await self.feed.process()
+
+
+    def assert_timestamps_equal(self, stamp1, stamp2):
+        self.assertEqual(0, stamp1.diff(stamp2).in_seconds())
+
+
+    async def test_process_empty(self):
+        await self.process_feed('<rss xmlns:dc="http://purl.org/dc/elements/1.1/" version="2.0"></rss>')
+        self.feed.storage.save_event.assert_not_called()
+        self.feed.alert.assert_not_called()
+        self.storage.delete_event.assert_not_called()
+        self.assertNotIn(self.feed.feed, self.storage.data)
+
+
+    async def test_process_message_too_old(self):
+        self.publish_date = self.publish_date.subtract(days=5)
+        await self.process_feed()
+        self.storage.save_event.assert_not_called()
+        self.feed.alert.assert_not_called()
+        self.storage.delete_event.assert_not_called()
+        self.assertNotIn(self.feed.feed, self.storage.data)
+
+
+    async def test_process_recent(self):
+        self.publish_date = self.publish_date.subtract(minutes=5)
+        await self.process_feed()
+        self.feed.storage.save_event.assert_not_called()
+        self.feed.alert.assert_called()
+        self.feed.storage.delete_event.assert_not_called()
+        self.assert_timestamps_equal(self.publish_date, self.feed.storage.data[self.feed.feed])
+
+
+    async def test_process_new_future_event(self):
+        self.publish_date = self.publish_date.add(minutes=10)
+        await self.process_feed()
+        self.assert_timestamps_equal(self.now, self.storage.data[self.storage_name()])
+        self.feed.alert.assert_called()
+        self.storage.delete_event.assert_not_called()
+        self.assertNotIn(self.feed.feed, self.storage.data)
+
+
+    async def test_process_seen_future_event_realert(self):
+        self.publish_date = self.publish_date.add(minutes=10)
+        storage_name = self.storage_name()
+        self.storage.data[storage_name] = self.now.subtract(days=2)
+        await self.process_feed()
+        self.assert_timestamps_equal(self.now, self.storage.data[storage_name])
+        self.feed.alert.assert_called()
+        self.storage.delete_event.assert_not_called()
+        self.assertNotIn(self.feed.feed, self.storage.data)
+
+
+    async def test_process_seen_future_event_custom_realert(self):
+        self.publish_date = self.publish_date.add(minutes=10)
+        self.feed.cfg["re_alert"] = 1
+        storage_name = self.storage_name()
+        self.storage.data[storage_name] = self.now.subtract(hours=2)
+        await self.process_feed()
+        self.assert_timestamps_equal(self.now, self.storage.data[storage_name])
+        self.feed.alert.assert_called()
+        self.storage.delete_event.assert_not_called()
+        self.assertNotIn(self.feed.feed, self.storage.data)
+
+
+    async def test_process_seen_future_event(self):
+        self.publish_date = self.publish_date.add(minutes=10)
+        self.storage.data[self.storage_name()] = self.now.subtract(minutes=5)
+        await self.process_feed()
+        self.feed.storage.save_event.assert_not_called()
+        self.feed.alert.assert_not_called()
+        self.storage.delete_event.assert_not_called()
+        self.assertNotIn(self.feed.feed, self.storage.data)
+
+
+    async def test_process_seen_event_from_past(self):
+        self.publish_date = self.publish_date.subtract(minutes=10)
+        storage_name = self.storage_name()
+        self.storage.data[storage_name] = self.now.subtract(hours=5)
+        await self.process_feed()
+        self.storage.save_event.assert_not_called()
+        self.feed.alert.assert_called()
+        self.assertNotIn(storage_name, self.storage.data)
+        self.assert_timestamps_equal(self.publish_date, self.storage.data[self.feed.feed])
+
+
+    async def test_process_multiple_messages(self):
+        self.publish_date = self.publish_date.subtract(minutes=10)
+        future_publish_date = self.publish_date.add(days=2)
+        older_publish_date = self.publish_date.subtract(minutes=10)
+        future_event_title = "Notice: The future is coming"
+        future_event_description = "Issue summary: something's gonna happen but I forget what"
+        rss = f"""
+        <rss xmlns:dc="http://purl.org/dc/elements/1.1/" version="2.0">
+            <channel>
+                <title>Fake System Status</title>
+                <link>https://status.fake.thing/</link>
+                <description>Fake System Status Notices</description>
+                <lastBuildDate>{self.publish_date.to_rss_string()}</lastBuildDate>
+                <item>
+                    <title>{future_event_title}</title>
+                    <description>{future_event_description}</description>
+                    <pubDate>{future_publish_date.to_rss_string()}</pubDate>
+                    <link>https://status.fake.thing/zyxwvu</link>
+                    <guid>https://status.fake.thing/zyxwvu</guid>
+                </item>
+                <item>
+                    <title>Recovery: Things are okay I guess</title>
+                    <description>Issue summary: yeah it's alright now</description>
+                    <pubDate>{self.publish_date.to_rss_string()}</pubDate>
+                    <link>https://status.fake.thing/ghijkl</link>
+                    <guid>https://status.fake.thing/ghijkl</guid>
+                </item>
+                <item>
+                    <title>{self.event_title}</title>
+                    <description>{self.event_description}</description>
+                    <pubDate>{older_publish_date.to_rss_string()}</pubDate>
+                    <link>https://status.fake.thing/abcdef</link>
+                    <guid>https://status.fake.thing/abcdef</guid>
+                </item>
+            </channel>
+        </rss>
+        """
+        self.event_title = future_event_title
+        self.event_description = future_event_description
+        self.storage.data[self.storage_name()] = self.now.subtract(minutes=5)
+        await self.process_feed(rss)
+        self.storage.save_event.assert_not_called()
+        self.assertEqual(2, self.feed.alert.call_count)
+        self.storage.delete_event.assert_not_called()
+        self.assert_timestamps_equal(self.publish_date, self.storage.data[self.feed.feed])

@@ -99,16 +99,6 @@ class Feed:
         return last_update
 
 
-    def save_date(self, new_date: pendulum.DateTime):
-        """
-        Sets the 'last run' date in storage.
-
-        Args:
-            date: obviously, the date
-        """
-        self.storage.save_date(self.feed, new_date)
-
-
     async def _fetch(self, session, timeout=10):
         """
         Async'ly fetch the feed
@@ -213,9 +203,10 @@ class Feed:
             if entry.published <= self.previous_date:
                 continue
 
-            event_id = md5(entry.title + entry.description)
+            event_id = md5((entry.title + entry.description).encode()).hexdigest()
             last_sent = self.storage.load_event(self.feed, event_id)
             re_alert = self.cfg.get('re_alert', rssalertbot.RE_ALERT_DEFAULT)
+            should_delete_message = False
 
             if entry.published > now:
                 if last_sent and now < last_sent.add(hours=re_alert):
@@ -236,7 +227,7 @@ class Feed:
                 self.storage.delete_event(self.feed, event_id)
 
         if new_date != self.previous_date:
-            self.save_date(new_date)
+            self.storage.save_date(self.feed, new_date)
         self.log.info(f"End processing feed {self.name}, previous date {new_date}")
 
 
