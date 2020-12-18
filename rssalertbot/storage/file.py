@@ -12,32 +12,28 @@ class FileStorage(BaseStorage):
     """
     Store state in files.
     """
+    not_found_exception_class = IOError
 
     def __init__(self, path='/var/run/rss_state'):
         self.basepath = path
 
 
-    def last_update(self, feed) -> pendulum.DateTime:
-        """
-        Get the last updated date for the given feed
-        """
-        datafile = os.path.join(self.basepath, f'last.{feed}.dat')
-        try:
-            with open(datafile, 'r') as f:
-                return pendulum.parse(f.read().strip())
-        except IOError as e:
-            log.debug(f"Error reading data file: {e}")
-            return pendulum.yesterday('UTC')
+    def _datafile(self, filename):
+        return os.path.join(self.basepath, f'last.{filename}.dat')
 
 
-    def save_date(self, feed, date: pendulum.DateTime):
-        """
-        Save the date for the current event.
-        """
+    def _read(self, name):
+        with open(self._datafile(name), 'r') as f:
+            return pendulum.parse(f.read().strip())
+
+
+    def _write(self, name, date):
         # just in case someone didn't follow the type hints
         if isinstance(date, datetime.datetime):
             date = pendulum.from_timestamp(date.timestamp())
-
-        datafile = os.path.join(self.basepath, f'last.{feed}.dat')
-        with open(datafile, 'w') as f:
+        with open(self._datafile(name), 'w') as f:
             f.write(str(date.in_tz('UTC')))
+
+
+    def _delete(self, name):
+        os.remove(self._datafile(name))

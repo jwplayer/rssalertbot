@@ -12,6 +12,7 @@ import feedparser
 import logging
 import pendulum
 from box import Box
+from hashlib import md5
 
 import rssalertbot
 import rssalertbot.alerts
@@ -26,19 +27,21 @@ class Feed:
 
     Args:
         cfg (Box):      full configuration
+        storage:        Instantiated :py:class:`rssalertbot.storage.BaseStorage` subclass
         group (Box):    the group config
         name (str):     Feed name
         url (str):      URL to fetch
-        storage:        Instantiated :py:class:`rssalertbot.storage.BaseStorage` subclass
     """
 
     def __init__(self, cfg, storage, group, name, url):
 
-        self.group = group
         self.cfg  = cfg
+        self.storage = storage
+        self.group = group
         self.name = name
         self.url  = url
-        self.storage = storage
+
+        self.feed = f'{self.group.name}-{self.name}'
 
         self.log = logging.LoggerAdapter(
             log,
@@ -89,19 +92,11 @@ class Feed:
     @property
     def previous_date(self):
         """Get the previous date from storage"""
-        key = f'{self.group.name}-{self.name}'
-        return self.storage.last_update(key)
-
-
-    def save_date(self, new_date: pendulum.DateTime):
-        """
-        Sets the 'last run' date in storage.
-
-        Args:
-            date: obviously, the date
-        """
-        key = f'{self.group.name}-{self.name}'
-        self.storage.save_date(key, new_date)
+        yesterday = pendulum.yesterday('UTC')
+        last_update = self.storage.last_update(self.feed)
+        if not last_update or last_update < yesterday:
+            last_update = yesterday
+        return last_update
 
 
     async def _fetch(self, session, timeout=10):
@@ -194,7 +189,7 @@ class Feed:
 
         self.log.info(f"Begining processing feed {self.name}, previous date {self.previous_date}")
 
-        new_date = pendulum.datetime(1970, 1, 1, tz='UTC')
+        new_date = self.previous_date
         now = pendulum.now('UTC')
 
         for entry in await self.fetch_and_parse(timeout):
@@ -204,27 +199,35 @@ class Feed:
             # also save a prettified string format
             entry.datestring = self.format_timestamp_local(entry.published)
 
-            # store the date from the first entry
-            if entry.published > new_date:
-                new_date = entry.published
-
             # skip anything that's stale
-            if entry.published <= now.subtract(days=1):
-                continue
-
-            # and anything before the previous date
             if entry.published <= self.previous_date:
                 continue
 
-            self.log.debug(f"Found new entry {entry.published}")
+            event_id = md5((entry.title + entry.description).encode()).hexdigest()
+            last_sent = self.storage.load_event(self.feed, event_id)
+            re_alert = self.cfg.get('re_alert', rssalertbot.RE_ALERT_DEFAULT)
+            should_delete_message = False
+
+            if entry.published > now:
+                if last_sent and now < last_sent.add(hours=re_alert):
+                    continue
+                self.storage.save_event(self.feed, event_id, now)
+            else:
+                if entry.published > new_date:
+                    new_date = entry.published
+                should_delete_message = last_sent
+
+            self.log.debug(f"Found entry {entry.published}")
 
             # alert on it
             await self.alert(entry)
 
-            if not new_date:
-                new_date = now
+            if should_delete_message:
+                self.log.debug(f"Deleting stored date for message {event_id}")
+                self.storage.delete_event(self.feed, event_id)
 
-        self.save_date(new_date)
+        if new_date != self.previous_date:
+            self.storage.save_date(self.feed, new_date)
         self.log.info(f"End processing feed {self.name}, previous date {new_date}")
 
 

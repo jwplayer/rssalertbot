@@ -2,6 +2,12 @@
 Changelog
 #########
 
+2.4.0 (mgundel)
+---------------
+
+* Add better handling for future events, with global re-alerting configuration
+  - resolves `<https://github.com/jwplayer/rssalertbot/issues/9>`_
+
 2.3.3 (alertedsnake)
 --------------------
 

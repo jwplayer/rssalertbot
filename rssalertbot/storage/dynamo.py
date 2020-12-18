@@ -25,6 +25,8 @@ class DynamoStorage(BaseStorage):
     """
     Base class for storing state.
     """
+    not_found_exception_class = DoesNotExist
+
     def __init__(self, table=None, url=None, region='us-east-1'):
 
         self.url = url
@@ -56,26 +58,21 @@ class DynamoStorage(BaseStorage):
 #        )
 
 
-    def last_update(self, feed) -> pendulum.DateTime:
-        """
-        Get the last updated date for the given feed
-        """
-        try:
-            obj = FeedState.get(feed)
-            return obj.last_run
-        except DoesNotExist:
-            return pendulum.yesterday('UTC')
+    def _read(self, name):
+        obj = FeedState.get(name)
+        return pendulum.instance(obj.last_run)
 
 
-    def save_date(self, feed, date: pendulum.DateTime):
-        """
-        Save the date for the current event
-        """
+    def _write(self, name, date):
         try:
-            obj = FeedState.get(feed)
-            obj.last_run = date
-            obj.save()
-            log.debug(f"Saved date for '{feed}'")
+            obj = FeedState.get(name)
         except DoesNotExist:
-            obj = FeedState(name=feed, last_run=date)
-            obj.save()
+            obj = FeedState(name=name)
+        obj.last_run = date
+        obj.save()
+        log.debug(f"Saved date for '{name}'")
+
+
+    def _delete(self, name):
+        obj = FeedState.get(name)
+        obj.delete()
