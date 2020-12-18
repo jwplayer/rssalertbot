@@ -60,7 +60,7 @@ class DynamoStorage(BaseStorage):
 
     def _read(self, name):
         obj = FeedState.get(name)
-        return obj.last_run
+        return pendulum.instance(obj.last_run)
 
 
     def _write(self, name, date):
