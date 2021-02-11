@@ -14,8 +14,8 @@ services:
                 PIP_EXTRA_INDEX_URL: ${PIP_EXTRA_INDEX_URL}
         environment:
             AWS_CREDENTIAL_FILE: /home/bot/.aws/credentials
-            AWS_PROFILE:         ${AWS_PROFILE:dev}
-            AWS_DEFAULT_REGION:  ${AWS_DEFAULT_REGION:us-east-1}
+            AWS_PROFILE:         ${AWS_PROFILE:-dev}
+            AWS_DEFAULT_REGION:  ${AWS_DEFAULT_REGION:-us-east-1}
         volumes:
             - ./config.yaml:/app/config.yaml
             - ${HOME}/.config/rssalertbot/credentials:/home/bot/.aws/credentials:ro

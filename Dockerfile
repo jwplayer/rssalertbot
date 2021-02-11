@@ -19,12 +19,10 @@ RUN apk add --no-cache \
         ca-certificates \
         libssl1.1 \
         python3 \
-        py3-aiohttp \
-        py3-cryptography \
-        py3-feedparser \
+        py3-multidict \
         py3-pip \
         py3-setuptools \
-        py3-wheel \
+        py3-yarl \
         tini \
         tzdata \
         yaml \
@@ -38,6 +36,7 @@ RUN cp /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ >/etc/timezone && apk 
 COPY rssalertbot /app/rssalertbot
 COPY CHANGELOG.rst MANIFEST.in setup.py /app/
 WORKDIR /app
+RUN pip install -U pip
 RUN pip install -e '.[dynamo,slack]'
 
 # don't run as root

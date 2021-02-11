@@ -50,7 +50,7 @@ class Feed:
                 "group": self.group.name,
             })
 
-        self.log.debug(f"Setting up feed {self.name}")
+        self.log.debug("Setting up feed %s", self.name)
 
         # start with the global outputs - note the copy so we don't mess
         # with the main config dictionary
@@ -79,13 +79,13 @@ class Feed:
         if self.outputs.get('slack.enabled'):
             for field in ('slack.channel', 'slack.token'):
                 if not self.outputs.get(field):
-                    self.log.error(f"Slack enabled but {field} not set!")
+                    self.log.error("Slack enabled but %s not set!", field)
                     self.outputs.set('slack.enabled', False)
 
         if self.outputs.get('email.enabled'):
             for field in ('email.to', 'email.from'):
                 if not self.outputs.get(field):
-                    self.log.error(f"Email enabled but {field} not set!")
+                    self.log.error("Email enabled but %s not set!", field)
                     self.outputs.set('email.enabled', False)
 
 
@@ -111,7 +111,7 @@ class Feed:
             str: response text
         """
 
-        self.log.debug(f"Fetching url: {self.url}")
+        self.log.debug("Fetching url: %s", self.url)
         with async_timeout.timeout(timeout):
             try:
                 async with session.get(self.url) as response:
@@ -187,7 +187,8 @@ class Feed:
             timeout (int): HTTP timeout
         """
 
-        self.log.info(f"Begining processing feed {self.name}, previous date {self.previous_date}")
+        self.log.info("Begining processing feed %s, previous date %s",
+                      self.name, self.previous_date)
 
         new_date = self.previous_date
         now = pendulum.now('UTC')
@@ -217,7 +218,7 @@ class Feed:
                     new_date = entry.published
                 should_delete_message = last_sent
 
-            self.log.debug(f"Found entry {entry.published}")
+            self.log.debug("Found new entry %s", entry.published)
 
             # alert on it
             await self.alert(entry)
@@ -228,7 +229,7 @@ class Feed:
 
         if new_date != self.previous_date:
             self.storage.save_date(self.feed, new_date)
-        self.log.info(f"End processing feed {self.name}, previous date {new_date}")
+        self.log.info("End processing feed %s, previous date %s", self.name, new_date)
 
 
     async def alert(self, entry):
