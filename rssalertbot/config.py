@@ -95,7 +95,7 @@ class Config(Box):
         if not os.path.isfile(cfgfile):
             raise ValueError(f"Cannot read config file '{cfgfile}'")
 
-        log.debug(f"Loading config file {cfgfile}")
+        log.debug("Loading config file %s", cfgfile)
         with open(cfgfile, 'r', encoding=encoding) as f:
             if cfgfile.endswith('.json'):
                 data_dict = json.load(f)

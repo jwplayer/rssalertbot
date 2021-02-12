@@ -37,7 +37,7 @@ def alert_email(feed, cfg, entry):
         'group': feed.group['name'],
     })
 
-    logger.debug(f"[{feed.name}] Alerting email: {entry.title}")
+    logger.debug("[%s]] Alerting email: %s", feed.name, entry.title)
 
     description = strip_html(entry.description)
 
@@ -50,7 +50,7 @@ def alert_email(feed, cfg, entry):
         smtp.send(message)
 
     except Exception:
-        logger.exception(f"[{feed.name}] Error sending mail")
+        logger.exception("[%s] Error sending mail", feed.name)
 
 
 def alert_log(feed, cfg, entry):
@@ -68,9 +68,9 @@ def alert_log(feed, cfg, entry):
     })
     logger.setLevel(logging.DEBUG)
 
-    logger.warning(f"[{feed.name}] {entry.published}: {entry.title}")
+    logger.warning("[%s] %s: %s", feed.name, entry.published, entry.title)
     if entry.description:
-        logger.debug(f"[{feed.name}] {entry.description}")
+        logger.debug("[%s] %s", feed.name, entry.description)
 
 
 async def alert_slack(feed, cfg, entry, level=None):
@@ -88,7 +88,7 @@ async def alert_slack(feed, cfg, entry, level=None):
         'group': feed.group['name'],
     })
     logger.setLevel(logging.DEBUG)
-    logger.debug(f"[{feed.name}] Alerting slack: {entry.title}")
+    logger.debug("[%s] Alerting slack: %s", feed.name, entry.title)
 
     # load this here to nicely deal with pip extras
     try:
@@ -144,9 +144,9 @@ async def alert_slack(feed, cfg, entry, level=None):
     def on_result(channel, future):
         response = future.result()
         if response['ok']:
-            logger.debug(f"Sent message to slack channel {channel}")
+            logger.debug("Sent message to slack channel %s", channel)
         else:
-            logger.warning(f"Slack error: {response['response_metadata']}")
+            logger.warning("Slack error: %s", response['response_metadata'])
 
 
     try:
@@ -165,7 +165,7 @@ async def alert_slack(feed, cfg, entry, level=None):
             )
 
     except Exception:
-        logger.exception(f"[{feed.name}] Error contacting Slack")
+        logger.exception("[%s] Error contacting Slack", feed.name)
 
 
 def _make_blocks(feed, title, message, alert_class = 'warning', date=None):

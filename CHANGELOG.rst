@@ -2,6 +2,14 @@
 Changelog
 #########
 
+2.5.0 (alertedsnake)
+--------------------
+
+* Dependency updates
+* Fix build requirements, remove unnecessary packages, work around missing
+  wheels
+* Rework log calls for best practice
+
 2.4.0 (mgundel)
 ---------------
 
