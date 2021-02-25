@@ -2,6 +2,11 @@
 Changelog
 #########
 
+2.5.1 (mgundel)
+----------------
+
+* Rebuild container with Python revision that addresses CVE-2021-3177
+
 2.5.0 (alertedsnake)
 --------------------
 
