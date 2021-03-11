@@ -89,7 +89,6 @@ class Feed:
                     self.outputs.set('email.enabled', False)
 
 
-    @property
     def previous_date(self):
         """Get the previous date from storage"""
         yesterday = pendulum.yesterday('UTC')
@@ -187,11 +186,13 @@ class Feed:
             timeout (int): HTTP timeout
         """
 
-        self.log.info("Begining processing feed %s, previous date %s",
-                      self.name, self.previous_date)
-
-        new_date = self.previous_date
+        previous_date = self.previous_date()
+        new_date = previous_date
+        last_sent_message_date = previous_date
         now = pendulum.now('UTC')
+
+        self.log.info("Begining processing feed %s, previous date %s",
+                      self.name, previous_date)
 
         for entry in await self.fetch_and_parse(timeout):
 
@@ -201,7 +202,7 @@ class Feed:
             entry.datestring = self.format_timestamp_local(entry.published)
 
             # skip anything that's stale
-            if entry.published <= self.previous_date:
+            if entry.published <= previous_date:
                 continue
 
             event_id = md5((entry.title + entry.description).encode()).hexdigest()
@@ -222,13 +223,14 @@ class Feed:
 
             # alert on it
             await self.alert(entry)
+            if new_date > last_sent_message_date:
+                self.storage.save_date(self.feed, new_date)
+                last_sent_message_date = new_date
 
             if should_delete_message:
                 self.log.debug(f"Deleting stored date for message {event_id}")
                 self.storage.delete_event(self.feed, event_id)
 
-        if new_date != self.previous_date:
-            self.storage.save_date(self.feed, new_date)
         self.log.info("End processing feed %s, previous date %s", self.name, new_date)
 
 
