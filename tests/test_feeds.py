@@ -65,7 +65,7 @@ class TestFeeds(unittest.IsolatedAsyncioTestCase):
         # test we can get save a date and get it back
         date = pendulum.now('UTC')
         feed.storage.save_date(feed.feed, date)
-        self.assertEqual(date, feed.previous_date)
+        self.assertEqual(date, feed.previous_date())
 
 
     async def test_alerts_enabled(self):
@@ -181,7 +181,7 @@ class TestFeeds(unittest.IsolatedAsyncioTestCase):
         storage = MockStorage()
         storage.data = {f"{group.name}-{testdata['name']}": stored_date}
         feed = Feed(Config(), storage, group, testdata['name'], testdata['url'])
-        self.assertEqual(stored_date, feed.previous_date)
+        self.assertEqual(stored_date, feed.previous_date())
 
 
     def test_previous_date_old(self):
@@ -189,14 +189,14 @@ class TestFeeds(unittest.IsolatedAsyncioTestCase):
         storage = MockStorage()
         storage.data = {f"{group.name}-{testdata['name']}": stored_date}
         feed = Feed(Config(), storage, group, testdata['name'], testdata['url'])
-        self.assertEqual(pendulum.yesterday('UTC'), feed.previous_date)
+        self.assertEqual(pendulum.yesterday('UTC'), feed.previous_date())
 
 
     def test_previous_date_not_found(self):
         storage = MockStorage()
         storage.data = {f"{group.name}-{testdata['name']}": None}
         feed = Feed(Config(), storage, group, testdata['name'], testdata['url'])
-        self.assertEqual(pendulum.yesterday('UTC'), feed.previous_date)
+        self.assertEqual(pendulum.yesterday('UTC'), feed.previous_date())
 
 
     def make_entry(self, title="test entry", description="test description", date=None):
