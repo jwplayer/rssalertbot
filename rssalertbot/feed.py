@@ -187,11 +187,12 @@ class Feed:
         """
 
         previous_date = self.previous_date()
+        new_date = previous_date
+        last_sent_message_date = previous_date
+        now = pendulum.now('UTC')
+
         self.log.info("Begining processing feed %s, previous date %s",
                       self.name, previous_date)
-
-        new_date = previous_date
-        now = pendulum.now('UTC')
 
         for entry in await self.fetch_and_parse(timeout):
 
@@ -222,13 +223,14 @@ class Feed:
 
             # alert on it
             await self.alert(entry)
+            if new_date > last_sent_message_date:
+                self.storage.save_date(self.feed, new_date)
+                last_sent_message_date = new_date
 
             if should_delete_message:
                 self.log.debug(f"Deleting stored date for message {event_id}")
                 self.storage.delete_event(self.feed, event_id)
 
-        if new_date != previous_date:
-            self.storage.save_date(self.feed, new_date)
         self.log.info("End processing feed %s, previous date %s", self.name, new_date)
 
 
