@@ -2,6 +2,12 @@
 Changelog
 #########
 
+2.6.0 (mgundel)
+---------------
+
+* Reduce read calls against storage during feed processing
+* Update stored previous date for feed for each message alerted upon
+
 2.5.1 (mgundel)
 ----------------
 
