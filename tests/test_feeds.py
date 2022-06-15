@@ -421,37 +421,41 @@ class TestFeedFetchAndParse(unittest.IsolatedAsyncioTestCase):
         await self.feed.fetch_and_parse()
         self.assertEqual(headers, self.feed._fetch.call_args.args[0]._default_headers)
 
-    async def test_fetch_empty(self):
-        self.mock_getresp.text.return_value = None
+    async def test_fetch_not_rss(self):
+        self.mock_getresp.text.return_value = "This isn't RSS!"
         with self.assertLogs(level=logging.ERROR) as log:
             await self.feed.fetch_and_parse()
-        self.assertEqual("Error: no data recieved", log.records[0].getMessage())
+        parsed_bad_data = feedparser.parse(self.mock_getresp.text.return_value)
+        self.assertEqual(f"No valid RSS data from feed {self.feed.url}: {parsed_bad_data.bozo_exception}", log.records[0].getMessage())
 
     async def test_fetch_http_error(self):
         error_status = 500
         self.mock_getresp.status = error_status
         with self.assertLogs(level=logging.ERROR) as log:
-            await self.feed.fetch_and_parse()
+            result = await self.feed.fetch_and_parse()
         self.assertEqual(f"HTTP Error {error_status} fetching feed {self.feed.url}", log.records[0].getMessage())
         self.feed._handle_fetch_failure.assert_awaited_with("no data", f"HTTP error {error_status}")
+        self.assertListEqual([], result)
 
     async def test_fetch_timeout(self):
         async def timeout():
             await sleep(2)
         self.mock_get.return_value.__aenter__.side_effect = timeout
         with self.assertLogs(level=logging.ERROR) as log:
-            await self.feed.fetch_and_parse(timeout=0.01)
+            result = await self.feed.fetch_and_parse(timeout=0.01)
         self.assertEqual(f"Timeout fetching feed {self.feed.url}", log.records[0].getMessage())
         self.feed._handle_fetch_failure.assert_awaited_with("Timeout", "Timeout while fetching feed")
+        self.assertListEqual([], result)
 
     async def test_fetch_exception(self):
         exception = Exception()
         exctype = '.'.join((type(exception).__module__, type(exception).__name__))
         self.mock_get.return_value.__aenter__.side_effect = exception
         with self.assertLogs(level=logging.ERROR) as log:
-            await self.feed.fetch_and_parse()
+            result = await self.feed.fetch_and_parse()
         self.assertEqual(f"Error fetching feed {self.feed.url}", log.records[0].getMessage())
         self.feed._handle_fetch_failure.assert_awaited_with("Exception", f"{exctype} fetching feed: {exception}")
+        self.assertListEqual([], result)
 
     async def test_fetch_exception_alert(self):
         self.feed.group = {"alert_on_failure": True}
