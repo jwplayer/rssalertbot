@@ -2,6 +2,12 @@
 Changelog
 #########
 
+2.6.1 (mgundel)
+---------------
+
+* Ensure intended auth headers are part of the HTTP client session
+* Fix some bugs around error messaging on feed fetch/parse issues
+
 2.6.0 (mgundel)
 ---------------
 
