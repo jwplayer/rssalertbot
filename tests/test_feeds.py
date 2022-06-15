@@ -1,9 +1,13 @@
 
+import aiohttp
+import base64
 import copy
 import feedparser
+import logging
 import pendulum
 import testfixtures
 import unittest
+from asyncio import sleep
 from box import Box
 from hashlib import md5
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -26,6 +30,24 @@ testdata = {
     "url": "http://localhost:8930",
 }
 
+def rss_data(publish_date=pendulum.now("UTC"), event_title="Incident", event_description="Trouble!"):
+    return f"""
+            <rss xmlns:dc="http://purl.org/dc/elements/1.1/" version="2.0">
+                <channel>
+                    <title>Fake System Status</title>
+                    <link>https://status.fake.system/</link>
+                    <description>Fake System Status Notices</description>
+                    <lastBuildDate>{publish_date.to_rss_string()}</lastBuildDate>
+                    <item>
+                        <title>{event_title}</title>
+                        <description>{event_description}</description>
+                        <pubDate>{publish_date.to_rss_string()}</pubDate>
+                        <link>https://status.fake.system/abcdef</link>
+                        <guid>https://status.fake.system/abcdef</guid>
+                    </item>
+                </channel>
+            </rss>
+            """
 
 class MockStorage(BaseStorage):
 
@@ -233,23 +255,7 @@ class TestFeedProcessing(unittest.IsolatedAsyncioTestCase):
 
     async def process_feed(self, rss=None):
         if not rss:
-            rss = f"""
-            <rss xmlns:dc="http://purl.org/dc/elements/1.1/" version="2.0">
-                <channel>
-                    <title>Fake System Status</title>
-                    <link>https://status.fake.system/</link>
-                    <description>Fake System Status Notices</description>
-                    <lastBuildDate>{self.publish_date.to_rss_string()}</lastBuildDate>
-                    <item>
-                        <title>{self.event_title}</title>
-                        <description>{self.event_description}</description>
-                        <pubDate>{self.publish_date.to_rss_string()}</pubDate>
-                        <link>https://status.fake.system/abcdef</link>
-                        <guid>https://status.fake.system/abcdef</guid>
-                    </item>
-                </channel>
-            </rss>
-            """
+            rss = rss_data(self.publish_date, self.event_title, self.event_description)
         self.feed.fetch_and_parse = AsyncMock(return_value=feedparser.parse(rss).entries)
         await self.feed.process()
 
@@ -380,3 +386,75 @@ class TestFeedProcessing(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(2, self.feed.alert.call_count)
         self.storage.delete_event.assert_not_called()
         self.assert_timestamps_equal(self.publish_date, self.storage.data[self.feed.feed])
+
+
+class TestFeedFetchAndParse(unittest.IsolatedAsyncioTestCase):
+
+    def setUp(self):
+        # Set up the mock feed
+        self.feed = Feed(Config(), MockStorage(), group, testdata['name'], testdata['url'])
+        self.feed._handle_fetch_failure = AsyncMock(wraps=self.feed._handle_fetch_failure)
+        self.feed.alert = AsyncMock()
+
+        # Mock a valid async http get return
+        self.mock_getresp = AsyncMock()
+        self.mock_getresp.status = 200
+        self.mock_getresp.text.return_value = rss_data()
+
+        # Patch the get and set up contect manager mocking
+        aiohttp_get_patcher = patch.object(aiohttp.ClientSession, 'get')
+        self.mock_get = aiohttp_get_patcher.start()
+        self.mock_get.return_value.__aenter__.return_value = self.mock_getresp
+        self.addCleanup(aiohttp_get_patcher.stop)
+
+    async def test_fetch(self):
+        parsed_rss = feedparser.parse(self.mock_getresp.text.return_value)
+        fetch_and_parse_entires = await self.feed.fetch_and_parse()
+        self.assertListEqual(parsed_rss.entries, fetch_and_parse_entires)
+
+    async def test_fetch_auth(self):
+        self.feed._fetch = AsyncMock(return_value=None)
+        self.feed.username = "testuser"
+        self.feed.password = "testpassword"
+        creds = f'{self.feed.username}:{self.feed.password}'.encode('utf-8')
+        headers = {'Authorization': f'Basic {base64.urlsafe_b64encode(creds)}'}
+        await self.feed.fetch_and_parse()
+        self.assertEqual(headers, self.feed._fetch.call_args.args[0]._default_headers)
+
+    async def test_fetch_empty(self):
+        self.mock_getresp.text.return_value = None
+        with self.assertLogs(level=logging.ERROR) as log:
+            await self.feed.fetch_and_parse()
+        self.assertEqual("Error: no data recieved", log.records[0].getMessage())
+
+    async def test_fetch_http_error(self):
+        error_status = 500
+        self.mock_getresp.status = error_status
+        with self.assertLogs(level=logging.ERROR) as log:
+            await self.feed.fetch_and_parse()
+        self.assertEqual(f"HTTP Error {error_status} fetching feed {self.feed.url}", log.records[0].getMessage())
+        self.feed._handle_fetch_failure.assert_awaited_with("no data", f"HTTP error {error_status}")
+
+    async def test_fetch_timeout(self):
+        async def timeout():
+            await sleep(2)
+        self.mock_get.return_value.__aenter__.side_effect = timeout
+        with self.assertLogs(level=logging.ERROR) as log:
+            await self.feed.fetch_and_parse(timeout=0.01)
+        self.assertEqual(f"Timeout fetching feed {self.feed.url}", log.records[0].getMessage())
+        self.feed._handle_fetch_failure.assert_awaited_with("Timeout", "Timeout while fetching feed")
+
+    async def test_fetch_exception(self):
+        exception = Exception()
+        exctype = '.'.join((type(exception).__module__, type(exception).__name__))
+        self.mock_get.return_value.__aenter__.side_effect = exception
+        with self.assertLogs(level=logging.ERROR) as log:
+            await self.feed.fetch_and_parse()
+        self.assertEqual(f"Error fetching feed {self.feed.url}", log.records[0].getMessage())
+        self.feed._handle_fetch_failure.assert_awaited_with("Exception", f"{exctype} fetching feed: {exception}")
+
+    async def test_fetch_exception_alert(self):
+        self.feed.group = {"alert_on_failure": True}
+        self.mock_get.return_value.__aenter__.side_effect = Exception()
+        await self.feed.fetch_and_parse()
+        self.feed.alert.assert_awaited()
