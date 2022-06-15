@@ -168,7 +168,7 @@ class Feed:
             creds = f'{self.username}:{self.password}'.encode('utf-8')
             headers['Authorization'] = f'Basic {base64.urlsafe_b64encode(creds)}'
 
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(headers=headers) as session:
             rsp = await self._fetch(session, timeout)
 
             data = feedparser.parse(rsp)
