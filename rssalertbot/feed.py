@@ -4,6 +4,7 @@ Feed processing
 
 import aiohttp
 import async_timeout
+import asyncio
 import base64
 import concurrent.futures
 import copy
@@ -119,7 +120,7 @@ class Feed:
                         return await self._handle_fetch_failure('no data', f"HTTP error {response.status}")
                     return await response.text()
 
-            except concurrent.futures.CancelledError:
+            except asyncio.exceptions.CancelledError:
                 self.log.error("Timeout fetching feed %s", self.url)
                 await self._handle_fetch_failure('Timeout', "Timeout while fetching feed")
 
@@ -168,14 +169,16 @@ class Feed:
             creds = f'{self.username}:{self.password}'.encode('utf-8')
             headers['Authorization'] = f'Basic {base64.urlsafe_b64encode(creds)}'
 
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(headers=headers) as session:
             rsp = await self._fetch(session, timeout)
 
-            data = feedparser.parse(rsp)
-            if not data:
-                self.log.error("Error: no data recieved")
-                return []
-            return data.entries
+            feed_entries = []
+            if rsp:
+                data = feedparser.parse(rsp)
+                feed_entries = data.entries
+                if data.bozo:
+                    self.log.error(f"No valid RSS data from feed {self.url}: {data.bozo_exception}")
+            return feed_entries
 
 
     async def process(self, timeout=60):
