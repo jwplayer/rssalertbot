@@ -5,7 +5,10 @@ import logging
 import re
 import html2text
 import pendulum
-from mailer import Mailer, Message
+import smtplib
+import email
+from email.message import EmailMessage
+from email.mime.text import MIMEText
 
 import rssalertbot
 from .util import guess_level, strip_html
@@ -42,12 +45,18 @@ def alert_email(feed, cfg, entry):
     description = strip_html(entry.description)
 
     try:
-        smtp = Mailer(host=cfg['server'])
-        message = Message(charset="utf-8", From=cfg['from'], To=cfg['to'],
-                          Subject = f"{feed.group['name']} Alert: ({feed.name}) {entry.title}")
-        message.Body = f"Feed: {feed.name}\nDate: {entry.datestring}\n\n{description}"
-        message.header('X-Mailer', 'rssalertbot')
-        smtp.send(message)
+        message = EmailMessage()
+        message["From"] = cfg['from']
+        message["To"] = cfg['to']
+        message["Subject"] = f"{feed.group['name']} Alert: ({feed.name}) {entry.title}"
+
+        plainpart = MIMEText(f"Feed: {feed.name}\nDate: {entry.datestring}\n\n{description}", "plain")
+        plainpart.add_header('X-Mailer', 'rssalertbot')
+
+        message.attach(plainpart, "utf-8")
+
+        smtp = smtplib.SMTP(cfg['server'])
+        smtp.send_message(message)
 
     except Exception:
         logger.exception("[%s] Error sending mail", feed.name)

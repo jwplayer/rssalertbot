@@ -20,7 +20,7 @@ except Exception:
 install_requires = [
     'aiohttp',
     'feedparser~=6.0.0',
-    'mailer',
+    'email',
     'pendulum~=2.0',
     'html2text',
     'python-box~=4.2',

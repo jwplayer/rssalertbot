@@ -1,4 +1,4 @@
-FROM alpine:3.12
+FROM alpine:3.18
 LABEL Maintainer="Michael Stella <michael@jwplayer.com>"
 
 ARG PIP_EXTRA_INDEX_URL
