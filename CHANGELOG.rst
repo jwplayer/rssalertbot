@@ -3,7 +3,7 @@ Changelog
 #########
 
 2.7.0 (trajkovskaelena591)
----------------
+--------------------------
 
 * Replace deprecated mailer package
 * Upgrade Alpine
