@@ -1,5 +1,5 @@
-FROM alpine:3.12
-LABEL Maintainer="Michael Stella <michael@jwplayer.com>"
+FROM alpine:3.16
+LABEL Maintainer="Team DevOps <devops@jwplayer.com>"
 
 ARG PIP_EXTRA_INDEX_URL
 ENV PYTHON_EGG_CACHE=/tmp \
@@ -19,8 +19,11 @@ RUN apk add --no-cache \
         ca-certificates \
         libssl1.1 \
         python3 \
+        gcc \
+        musl-dev \
         py3-multidict \
         py3-pip \
+        python3-dev \
         py3-setuptools \
         py3-yarl \
         tini \
@@ -36,7 +39,7 @@ RUN cp /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ >/etc/timezone && apk 
 COPY rssalertbot /app/rssalertbot
 COPY CHANGELOG.rst MANIFEST.in setup.py /app/
 WORKDIR /app
-RUN pip install -U pip
+RUN pip install setuptools==57.5.0
 RUN pip install -e '.[dynamo,slack]'
 
 # don't run as root
