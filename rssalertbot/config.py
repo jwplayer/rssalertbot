@@ -7,7 +7,7 @@ import logging
 import os
 import yaml
 
-from box import Box
+from box import Box, BoxList
 from .util import deepmerge
 
 log = logging.getLogger(__name__)
@@ -134,9 +134,14 @@ class Config(Box):
         """
         Merge a dictionary into the config.
         """
+        if isinstance(data, Box):
+            data = data.to_dict()
+        if isinstance(data, BoxList):
+            data = dict(data.to_list())
+    
+        if type(data) != type({}):  # noqa: E721
 
-        if not isinstance(data, dict):
-            raise TypeError("Argument 'data' must be of type 'dict'")
+            raise TypeError(f"Argument 'data' must be of type 'dict' not {type(data)}")
 
         self.update(deepmerge(self.to_dict(), data))
 
