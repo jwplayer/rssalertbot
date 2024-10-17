@@ -1,3 +1,9 @@
+# Repository Status: Maintenance Mode
+
+As of 17 October 2024, this repository is now in maintenance mode.
+
+No further active development is planned, and the repository will remain available in its current state. We appreciate your support and contributions over time.
+
 ## rssalertbot
 
 This program is a basic RSS alert feed monitoring program.  It will fetch feeds,
